@@ -14,11 +14,21 @@ pub fn parseArgs() !void {
 /// Displays the usage instructions and a list of available commands
 ///
 /// PARAMETERS
-/// TBD
-// TODO: Add parameters to comment
+/// `p_file_handle` - File to print to (this should usually be stdout)
 pub fn printHelp(p_file_handle: std.fs.File) !void {
-    _ = p_file_handle;
-    // TODO: implement this
+    const p_file_writer: std.fs.File.Writer = p_file_handle.writer();
+
+    const help_menu: []const u8 = 
+    \\\ === USAGE ===
+    \\\ ./zenc -f=<path_to_file> [OPTIONS]
+    \\\ 
+    \\\ === OPTIONS ===
+    \\\ -f=<path_to_file> - Select file to perform crypto operations on.
+    \\\ -e - Encrypt
+    \\\ -d - Decrypt
+    ;
+
+    try p_file_writer.writeAll(help_menu);
 }
 
 /// DESCRIPTION
