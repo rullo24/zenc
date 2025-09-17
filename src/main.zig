@@ -3,7 +3,7 @@ const std = @import("std");
 // IMPORT LOCAL PACKAGES //
 const cipher: type = @import("cipher.zig");
 const cli: type = @import("cli.zig");
-const constants: type = @import("constants.zig");
+const tac: type = @import("types_and_constants.zig");
 const err: type = @import("err.zig");
 
 /// DESCRIPTION
@@ -12,10 +12,17 @@ const err: type = @import("err.zig");
 /// PARAMETERS
 /// N/A
 pub fn main() !void {
-    // TODO: implement this
-    
+    // init allocator
+    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
+    const alloc: std.mem.Allocator = gpa.allocator();
+    defer _ = gpa.deinit();
+        
     // capture args from user
-    
+    var args_obj: tac.ARGUMENT_STRUCT = tac.ARGUMENT_STRUCT{}; // to store arguments in easy-to-read format
+    const args: []const [:0]u8 = try std.process.argsAlloc(alloc); // capturing args from console
+    defer std.process.argsFree(alloc, args);
+    try cli.parseArgs(&args_obj, args); // capture arguments into ARGUMENT_STRUCT for easier use
+
     // check args are valid --> -e or -d and not both -e and -d
     
     // check if help flag is in captured args
