@@ -32,17 +32,24 @@ pub fn main() !void {
 
     // check args are valid 
     // Error Check - ONE OF -e or -d 
-    if (args_obj.opt_enc_file_loc == null and args_obj.opt_dec_file_loc == null) {
+    if ( !args_obj.opt_enc_file_loc and !args_obj.opt_dec_file_loc ) {
         return error.NO_ENC_OR_DEC_FILE;
     }
     // Error Check - NOT BOTH -e and -d
-    if (args_obj.opt_dec_file_loc != null and args_obj.opt_enc_file_loc) {
+    if ( args_obj.opt_dec_file_loc and args_obj.opt_enc_file_loc ) {
         return error.PROVIDED_ENC_AND_DEC_FILE;
     }
     
     // check if file to enc or dec exists
+    if (args_obj.opt_enc_file_loc) std.fs.cwd().access(args_obj.opt_enc_file_loc.?, .{}) catch return error.ENC_FILE_LOC_NOT_REAL
+    else if (args_obj.opt_dec_file_loc) try std.fs.cwd().access(args_obj.opt_dec_file_loc.?, .{}) catch return error.DEC_FILE_LOC_NOT_REAL
+    else return error.ENC_OR_DEC_FILE_DNE;
 
     // get file directory from path
+    const opt_encdec_file_dir: ?[]const u8 = 
+    if (args_obj.opt_enc_file_loc) std.fs.path.dirname(args_obj.opt_enc_file_loc.?) 
+    else if (args_obj.opt_dec_file_loc) std.fs.path.dirname(args_obj.opt_dec_file_loc) 
+    else return error.ENC_OR_DEC_FILE_DNE;
     
     // capture password from stdin (user input)
     
