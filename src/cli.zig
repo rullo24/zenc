@@ -74,19 +74,17 @@ pub fn parseArgs(p_arg_struct: *tac.ARGUMENT_STRUCT, args: []const [:0]u8) !void
 /// PARAMETERS
 /// `p_file_handle` - File to print to (this should usually be stdout)
 pub fn printHelp(p_file_handle: std.fs.File) !void {
-    const p_file_writer: std.fs.File.Writer = p_file_handle.writer();
-
     const help_menu: []const u8 = 
     \\\ === USAGE ===
     \\\ ./zenc -f=<path_to_file> [OPTIONS]
     \\\ 
     \\\ === OPTIONS ===
-    \\\ -f=<path_to_file> - Select file to perform crypto operations on.
-    \\\ -e - Encrypt
-    \\\ -d - Decrypt
+    \\\ -h OR --help -> Prints this help menu
+    \\\ -e=<file_to_encrypt> -> Encrypt file
+    \\\ -d=<file_to_decrypt> -> Decrypt file
     ;
 
-    try p_file_writer.writeAll(help_menu);
+    try p_file_handle.writeAll(help_menu);
 }
 
 /// DESCRIPTION
