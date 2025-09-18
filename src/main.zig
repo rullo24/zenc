@@ -12,23 +12,34 @@ const err: type = @import("err.zig");
 /// PARAMETERS
 /// N/A
 pub fn main() !void {
-    // init allocator
+    // init allocator + writers
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc: std.mem.Allocator = gpa.allocator();
     defer _ = gpa.deinit();
-        
-    // capture args from user
+    const stdout: std.fs.File = std.fs.File.stdout();
+
+    // capture args from user --> move args into zenc variables
     var args_obj: tac.ARGUMENT_STRUCT = tac.ARGUMENT_STRUCT{}; // to store arguments in easy-to-read format
     const args: []const [:0]u8 = try std.process.argsAlloc(alloc); // capturing args from console
     defer std.process.argsFree(alloc, args);
     try cli.parseArgs(&args_obj, args); // capture arguments into ARGUMENT_STRUCT for easier use
 
-    // check args are valid --> -e or -d and not both -e and -d
-    
     // check if help flag is in captured args
+    if (args_obj.has_help == true) {
+        try cli.printHelp(stdout);
+        return; // end program after printing help
+    }
+
+    // check args are valid 
+    // Error Check - ONE OF -e or -d 
+    if (args_obj.opt_enc_file_loc == null and args_obj.opt_dec_file_loc == null) {
+        return error.NO_ENC_OR_DEC_FILE;
+    }
+    // Error Check - NOT BOTH -e and -d
+    if (args_obj.opt_dec_file_loc != null and args_obj.opt_enc_file_loc) {
+        return error.PROVIDED_ENC_AND_DEC_FILE;
+    }
     
-    // move args into zenc variables
- 
     // check if file to enc or dec exists
 
     // get file directory from path
