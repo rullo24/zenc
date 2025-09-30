@@ -46,10 +46,10 @@ pub fn encrypt(p_nonce: *[tac.NONCE_SIZE]u8, p_key: *[tac.SHA256_BYTE_SIZE]u8, p
 /// PARAMETERS
 /// TBD
 // TODO: Add parameters to comment
-pub fn decrypt(p_nonce: *[tac.NONCE_SIZE]u8, p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext_buf: []const u8, ciphertext: []u8, p_tag: *[tac.AUTH_TAG_SIZE]u8) !void {
-    
+pub fn decrypt(p_nonce: *[tac.NONCE_SIZE]u8, p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext_buf: []u8, ciphertext: []u8, p_tag: *[tac.AUTH_TAG_SIZE]u8) !void {
+
     // run std lib decrypt method --> takes in auth tag and ciphertext which was saved in file
-    std.crypto.aead.aes_gcm.Aes256Gcm.decrypt(
+    try std.crypto.aead.aes_gcm.Aes256Gcm.decrypt(
         plaintext_buf, // m: output buf for decrypted plaintext
         ciphertext, // c: input buf (to decrypt)
         p_tag.*, // tag: input auth tag

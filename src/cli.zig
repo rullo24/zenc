@@ -1,6 +1,5 @@
 const std: type = @import("std");
 const tac: type = @import("types_and_constants.zig");
-const err: type = @import("err.zig");
 
 /// DESCRIPTION
 /// Parses and validates cli args to determine the action to be performed on data.

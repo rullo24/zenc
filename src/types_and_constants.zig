@@ -21,6 +21,6 @@ pub const PASS_CRYPTO_KEY_LENGTH: comptime_int = 32; // 256-bit for
 pub const SHA256_BYTE_SIZE: comptime_int = 32; // 32-bytes == 256-bit
 pub const NONCE_SIZE: comptime_int = 12; // size used by AES-GCM
 pub const AUTH_TAG_SIZE: comptime_int = 16;
-pub const ZENC_MAGIC_NUM: comptime_int = 0x0709131107091311;
+pub const ZENC_MAGIC_NUM: u64 = 0x0709131107091311;
 pub const ZENC_ENDIAN_TYPE = std.builtin.Endian.big;
 pub const CIPHER_ADDITIONAL_DATA: []const u8 = "";
