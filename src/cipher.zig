@@ -27,11 +27,7 @@ pub fn deriveKeyFromPass(password: []const u8, p_final_key: *[tac.SHA256_BYTE_SI
 /// PARAMETERS
 /// TBD
 // TODO: Add parameters to comment
-pub fn encrypt(p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext: []const u8, ciphertext_buf: []u8, p_tag: *[tac.AES_GCM_TAG_SIZE]u8) !void {
-
-    // generating nonce to "jumble encryption"
-    var nonce: [tac.NONCE_SIZE]u8 = undefined;
-    std.crypto.random.bytes(&nonce); // reading random bytes into the nonce buffer
+pub fn encrypt(p_nonce: *[tac.NONCE_SIZE]u8, p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext: []const u8, ciphertext_buf: []u8, p_tag: *[tac.AUTH_TAG_SIZE]u8) !void {
 
     // run std lib encryption method --> generates auth tag and ciphertext for writing to file w/ nonce
     std.crypto.aead.aes_gcm.Aes256Gcm.encrypt(
@@ -39,7 +35,7 @@ pub fn encrypt(p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext: []const u8, cipherte
         p_tag,
         plaintext,
         "",
-        nonce,
+        p_nonce.*,
         p_key.*,
     );
 }
@@ -51,7 +47,16 @@ pub fn encrypt(p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext: []const u8, cipherte
 /// TBD
 // TODO: Add parameters to comment
 pub fn decrypt() !void {
-    // TODO: implement this
+    
+    // run std lib decrypt method --> takes in auth tag and ciphertext which was saved in file
+    std.crypto.aead.aes_gcm.Aes256Gcm.decrypt(
+        m: []u8, 
+        c: []const u8, 
+        tag: [?]u8, 
+        ad: []const u8, 
+        npub: [?]u8, 
+        key: [?]u8
+    );
 }
 
 // PRIVATE FUNCTIONS //

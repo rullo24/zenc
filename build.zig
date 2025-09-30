@@ -5,9 +5,8 @@ pub fn build(b: *std.Build) !void {
     const def_optimise = b.standardOptimizeOption(.{});
 
     // EXECUTABLE BUILDING //
-
     const exe = b.addExecutable(.{
-        .name = "Zenc",
+        .name = "zenc",
         .root_module = b.createModule(.{
             .root_source_file = b.path("./src/main.zig"),
             .strip = true, // remove all debug symbols

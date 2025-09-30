@@ -75,13 +75,13 @@ pub fn parseArgs(p_arg_struct: *tac.ARGUMENT_STRUCT, args: []const [:0]u8) !void
 /// `p_file_handle` - File to print to (this should usually be stdout)
 pub fn printHelp(p_file_handle: std.fs.File) !void {
     const help_menu: []const u8 = 
-    \\\ === USAGE ===
-    \\\ ./zenc -f=<path_to_file> [OPTIONS]
-    \\\ 
-    \\\ === OPTIONS ===
-    \\\ -h OR --help -> Prints this help menu
-    \\\ -e=<file_to_encrypt> -> Encrypt file
-    \\\ -d=<file_to_decrypt> -> Decrypt file
+    \\ === USAGE ===
+    \\ ./zenc [OPTIONS]
+    \\ 
+    \\ === OPTIONS ===
+    \\ -h OR --help -> Prints this help menu
+    \\ -e=<file_to_encrypt> -> Encrypt file
+    \\ -d=<file_to_decrypt> -> Decrypt file
     ;
 
     try p_file_handle.writeAll(help_menu);

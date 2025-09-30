@@ -69,16 +69,21 @@ pub fn main() !void {
 
     // read file contents into buffer (heaped)
     const file_size: u64 = try p_file.getEndPos();
-    const plaintext_buf: []u8 = try alloc.alloc(u8, file_size); // heap buffer to store file bytes
-    defer alloc.free(plaintext_buf); // free copied file bytes on program exit
-    _ = try p_file.read(plaintext_buf); // reading unencrypted file data into plaintext buf
+    const raw_buf: []u8 = try alloc.alloc(u8, file_size); // heap buffer to store file bytes
+    defer alloc.free(raw_buf); // free copied file bytes on program exit
+    _ = try p_file.read(raw_buf); // reading unencrypted file data into raw buf
 
     // building buf for cipher text (encrypted)
     const ciphertext_buf: []u8 = try alloc.alloc(u8, file_size); // to be parsed to encrypt method for capturing contents
     defer alloc.free(ciphertext_buf);
 
+    // building buf for output file text (NONCE + ciphertext + AUTH_TAG)
+    const output_size: usize = (@sizeOf(tac.ZENC_MAGIC_NUM) + tac.NONCE_SIZE + ciphertext_buf.len + tac.AUTH_TAG_SIZE);
+    const output_buf: []u8 = try alloc.alloc(u8, output_size);
+    defer alloc.free(output_buf);
+
     // logic changes depending on if trying to encrypt or decrypt
-    if (args_obj.opt_enc_file_loc != null) { // if encrypting 
+    if (args_obj.opt_enc_file_loc != null) { // if encrypting
 
         // reconfirm entered password
         var pass_v2_buf: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
@@ -89,24 +94,28 @@ pub fn main() !void {
         // compare password_v1 and password_v2 --> throw error if these don't match
         if (std.mem.eql(u8, password_v1, password_v2) != true) return error.PASSWORDS_DO_NOT_MATCH;
 
+        // generating nonce to "jumble encryption"
+        var nonce: [tac.NONCE_SIZE]u8 = undefined;
+        std.crypto.random.bytes(&nonce); // reading random bytes into the nonce buffer
+
         // generate crypto key from password and salt
         var final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
         try cipher.deriveKeyFromPass(password_v1, &final_key); // moving crypto key into `final_key`
 
-        // encrypt plaintext contents into ciphertext buffer
-        var auth_tag: [tac.AES_GCM_TAG_SIZE]u8 = undefined;
-        try cipher.encrypt(&final_key, plaintext_buf, ciphertext_buf, &auth_tag);
+        // encrypt raw contents into ciphertext buffer
+        var auth_tag: [tac.AUTH_TAG_SIZE]u8 = undefined;
+        try cipher.encrypt(&nonce, &final_key, raw_buf, ciphertext_buf, &auth_tag);
 
-        // FIXME: this will free the ciphertext after scope is left even though it's still needed for file writing
-
-        // add auth tag to enc output (at start of file)
-
-
-        // write nonce, then ciphertext, then auth tag to file
-
-
-
-
+        // write magic num, then nonce, then ciphertext, then auth tag to ciphertext buffer
+        var offset: usize = 0;
+        std.mem.writeInt(u64, output_buf[offset..offset + @sizeOf(tac.ZENC_MAGIC_NUM)], tac.ZENC_MAGIC_NUM, tac.ZENC_ENDIAN_TYPE); // writing magic num
+        offset += @sizeOf(tac.ZENC_MAGIC_NUM);
+        @memcpy(output_buf[offset..offset+tac.NONCE_SIZE], &nonce); // write nonce
+        offset += tac.NONCE_SIZE;
+        @memcpy(output_buf[offset..offset+ciphertext_buf.len], ciphertext_buf); // write ciphertext
+        offset += ciphertext_buf.len;
+        @memcpy(output_buf[offset..offset+tac.AUTH_TAG_SIZE], &auth_tag); // write auth tag
+        offset += tac.AUTH_TAG_SIZE;
 
     } else if (args_obj.opt_dec_file_loc != null) { // if decrypting
 
@@ -118,11 +127,12 @@ pub fn main() !void {
 
         // verify auth tag to confirm data is valid (at start of file)
 
-           
 
 
     }
 
+
+    // TODO: file decrypted straight after encryption --> check auth tag and nonce work
     
 
     // generate output file name (extension changing)
