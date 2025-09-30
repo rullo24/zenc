@@ -8,11 +8,11 @@ const tac: type = @import("types_and_constants.zig");
 /// PARAMETERS
 /// TBD
 // TODO: Add parameters to comment
-pub fn deriveKeyFromPass(password: []const u8, p_final_key: *[tac.SHA256_BYTE_SIZE]u8) !void {
+pub fn deriveKeyFromPass(password: []const u8, salt: *const [tac.ZENC_SALT_SIZE]u8, p_final_key: *[tac.SHA256_BYTE_SIZE]u8) !void {
     const ENCRYPTION_CONTEXT_STR: []const u8 = "ZENC_FILE_ENCRYPTION_KEY";
 
     // extract pseudo random key from password and salt
-    const pass_salt_prk: [tac.SHA256_BYTE_SIZE]u8 = std.crypto.kdf.hkdf.HkdfSha256.extract(tac.ZENC_SALT, password);
+    const pass_salt_prk: [tac.SHA256_BYTE_SIZE]u8 = std.crypto.kdf.hkdf.HkdfSha256.extract(salt.*[0..], password);
     
     // expand prk into final encryption key
     std.crypto.kdf.hkdf.HkdfSha256.expand(
@@ -31,12 +31,12 @@ pub fn encrypt(p_nonce: *[tac.NONCE_SIZE]u8, p_key: *[tac.SHA256_BYTE_SIZE]u8, p
 
     // run std lib encryption method --> generates auth tag and ciphertext for writing to file w/ nonce
     std.crypto.aead.aes_gcm.Aes256Gcm.encrypt(
-        ciphertext_buf,
-        p_tag,
-        plaintext,
-        "",
-        p_nonce.*,
-        p_key.*,
+        ciphertext_buf, // c: output buffer for encrypted results
+        p_tag, // tag: auth tag
+        plaintext, // m: plaintext buf input from file
+        tac.CIPHER_ADDITIONAL_DATA, // ad: additional data
+        p_nonce.*, // npub: input nonce
+        p_key.*, // key: input cipher key (from password)
     );
 }
 
@@ -46,16 +46,16 @@ pub fn encrypt(p_nonce: *[tac.NONCE_SIZE]u8, p_key: *[tac.SHA256_BYTE_SIZE]u8, p
 /// PARAMETERS
 /// TBD
 // TODO: Add parameters to comment
-pub fn decrypt() !void {
+pub fn decrypt(p_nonce: *[tac.NONCE_SIZE]u8, p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext_buf: []const u8, ciphertext: []u8, p_tag: *[tac.AUTH_TAG_SIZE]u8) !void {
     
     // run std lib decrypt method --> takes in auth tag and ciphertext which was saved in file
     std.crypto.aead.aes_gcm.Aes256Gcm.decrypt(
-        m: []u8, 
-        c: []const u8, 
-        tag: [?]u8, 
-        ad: []const u8, 
-        npub: [?]u8, 
-        key: [?]u8
+        plaintext_buf, // m: output buf for decrypted plaintext
+        ciphertext, // c: input buf (to decrypt)
+        p_tag.*, // tag: input auth tag
+        tac.CIPHER_ADDITIONAL_DATA, // ad: additional data
+        p_nonce.*, // npub: input nonce
+        p_key.*, // key: input cipher key (from password)
     );
 }
 

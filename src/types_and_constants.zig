@@ -16,10 +16,11 @@ pub const MIN_OTHER_FLAG_AVAILABLE_LEN: comptime_int = 3; // "-e=" or "-d=" befo
 pub const ARGUMENT_BEHAVIOUR_LETTER_INDEX: comptime_int = 1; // 'e' - encryption or 'd' - decryption
 
 pub const MAX_PASSWORD_SIZE_BYTES: comptime_int = 256;
-pub const ZENC_SALT: []const u8 = "THE_ZENC_SALT";
+pub const ZENC_SALT_SIZE: comptime_int = 16; // for KDF salt
 pub const PASS_CRYPTO_KEY_LENGTH: comptime_int = 32; // 256-bit for
 pub const SHA256_BYTE_SIZE: comptime_int = 32; // 32-bytes == 256-bit
 pub const NONCE_SIZE: comptime_int = 12; // size used by AES-GCM
 pub const AUTH_TAG_SIZE: comptime_int = 16;
 pub const ZENC_MAGIC_NUM: comptime_int = 0x0709131107091311;
 pub const ZENC_ENDIAN_TYPE = std.builtin.Endian.big;
+pub const CIPHER_ADDITIONAL_DATA: []const u8 = "";

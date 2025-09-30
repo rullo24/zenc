@@ -74,11 +74,14 @@ pub fn main() !void {
     _ = try p_file.read(raw_buf); // reading unencrypted file data into raw buf
 
     // building buf for cipher text (encrypted)
+
+    // FIXME: ciphertext_buf size will be as large as file_size in decrypt (not same size as when enc happens due to added baggage)
+
     const ciphertext_buf: []u8 = try alloc.alloc(u8, file_size); // to be parsed to encrypt method for capturing contents
     defer alloc.free(ciphertext_buf);
 
     // building buf for output file text (NONCE + ciphertext + AUTH_TAG)
-    const output_size: usize = (@sizeOf(tac.ZENC_MAGIC_NUM) + tac.NONCE_SIZE + ciphertext_buf.len + tac.AUTH_TAG_SIZE);
+    const output_size: usize = (@sizeOf(tac.ZENC_MAGIC_NUM) + tac.ZENC_SALT.len + tac.NONCE_SIZE + ciphertext_buf.len + tac.AUTH_TAG_SIZE);
     const output_buf: []u8 = try alloc.alloc(u8, output_size);
     defer alloc.free(output_buf);
 
@@ -100,16 +103,20 @@ pub fn main() !void {
 
         // generate crypto key from password and salt
         var final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
-        try cipher.deriveKeyFromPass(password_v1, &final_key); // moving crypto key into `final_key`
+        var salt: [tac.ZENC_SALT_SIZE]u8 = undefined;
+        std.crypto.random.bytes(&salt) catch return error.RANDOM_NUM_GENERATOR_FAILURE;
+        try cipher.deriveKeyFromPass(password_v1, &salt, &final_key); // moving crypto key into `final_key`
 
         // encrypt raw contents into ciphertext buffer
         var auth_tag: [tac.AUTH_TAG_SIZE]u8 = undefined;
         try cipher.encrypt(&nonce, &final_key, raw_buf, ciphertext_buf, &auth_tag);
 
-        // write magic num, then nonce, then ciphertext, then auth tag to ciphertext buffer
+        // write magic num, then salt, then nonce, then ciphertext, then auth tag to ciphertext buffer
         var offset: usize = 0;
         std.mem.writeInt(u64, output_buf[offset..offset + @sizeOf(tac.ZENC_MAGIC_NUM)], tac.ZENC_MAGIC_NUM, tac.ZENC_ENDIAN_TYPE); // writing magic num
         offset += @sizeOf(tac.ZENC_MAGIC_NUM);
+        @memcpy(output_buf[offset..offset+tac.ZENC_SALT_SIZE], &salt); // write salt
+        offset += tac.ZENC_SALT_SIZE;
         @memcpy(output_buf[offset..offset+tac.NONCE_SIZE], &nonce); // write nonce
         offset += tac.NONCE_SIZE;
         @memcpy(output_buf[offset..offset+ciphertext_buf.len], ciphertext_buf); // write ciphertext
@@ -120,10 +127,21 @@ pub fn main() !void {
     } else if (args_obj.opt_dec_file_loc != null) { // if decrypting
 
         // verify entered file starts with ZENC_MAGIC_NUMBER
+        if (file_size < (@sizeOf(tac.ZENC_MAGIC_NUM) + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL;
+        if (std.mem.eql(u64, raw_buf[0..tac.ZENC_MAGIC_NUM], tac.ZENC_MAGIC_NUM) != true) return error.TRIED_TO_DECRYPT_NON_ZENC_FILE;
     
-        //  extract nonce and salt from file
+        //  extract salt, nonce, encrypted text and auth tag from file
+        var offset: usize = @sizeOf(tac.ZENC_MAGIC_NUM); // skip magic num
+        const retrieved_salt: []const u8 = raw_buf[offset..offset+tac.ZENC_SALT_SIZE];
+        offset += tac.ZENC_SALT_SIZE;
+        const retrieved_nonce: []const u8 = raw_buf[offset..offset+tac.NONCE_SIZE];
+        offset += tac.NONCE_SIZE;
+        const retrieved_ciphertext: []const u8 = raw_buf[offset..offset+(raw_buf.len-tac.AUTH_TAG_SIZE+1)];
+        offset += raw_buf.len - tac.AUTH_TAG_SIZE + 1;
+        const retrieved_auth_tag: []const u8 = raw_buf[offset..offset+tac.AUTH_TAG_SIZE];
     
         // use derived key, nonce and salt to decrypt file contents into second buffer
+
 
         // verify auth tag to confirm data is valid (at start of file)
 
