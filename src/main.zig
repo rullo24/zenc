@@ -176,15 +176,13 @@ pub fn main() !void {
             @constCast(retrieved_ciphertext),
             @constCast(@ptrCast(retrieved_auth_tag)),
         );
-
     }
-
 
     // TODO: file decrypted straight after encryption --> check auth tag and nonce work
 
     // TODO: split main function portions out into sub functions
 
-    // TODO: write tests for each sub function
+    // TODO: testing, testing, testing for EVERYTHING
     
     // generate output file name (extension changing)
     
