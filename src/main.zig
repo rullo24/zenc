@@ -116,7 +116,7 @@ pub fn main() !void {
         try stdout.flush();
 
         // 1. basic file check to see if file can hold all non-ciphertext info
-        if (file_size < (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL; 
+        if (file_size < (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL_FOR_ZENC_FILE; 
 
         // 2. extract magic num, salt, nonce, encrypted text and auth tag from file
         const retrieved_components: packaging.CIPHER_COMPONENTS = try packaging.packDecryptionDataToOutputBuf(raw_buf);
