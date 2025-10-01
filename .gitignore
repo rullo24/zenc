@@ -1,3 +1,10 @@
 /zig-out
 /.zig-cache
 planning/.$*
+:w
+;w
+:wq
+:q
+:e
+:edit
+:sp

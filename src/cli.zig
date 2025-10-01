@@ -7,7 +7,6 @@ const tac: type = @import("types_and_constants.zig");
 /// PARAMETERS
 /// `p_arg_struct` - Stack defined variable to store the captured arguments in a struct-like format
 /// `args` - Sentinel arguments captured using std.process.argsAlloc
-
 pub fn parseArgs(p_arg_struct: *tac.ARGUMENT_STRUCT, args: []const [:0]u8) !void {
     // iterate over each parameter
     for (0..args.len) |i| {
@@ -87,13 +86,26 @@ pub fn printHelp(p_file_handle: std.fs.File) !void {
 }
 
 /// DESCRIPTION
-/// Checks if a file exists and if the program has the correct permissions to perform its operations
+/// Checks if sufficient arguments were parsed to allow to program to perform some operation.
 ///
 /// PARAMETERS
-/// TBD
-// TODO: Add parameters to comment
-pub fn validateFilePath() !void {
-    // TODO: implement this
+/// `p_args_obj` - ptr to arguments struct for processing
+pub fn validateArgsObj(p_args_obj: *tac.ARGUMENT_STRUCT) !void {
+    // Error Check - ONE OF -e or -d 
+    if ( p_args_obj.opt_enc_file_loc == null and p_args_obj.opt_dec_file_loc == null) {
+        return error.NO_ENC_OR_DEC_FILE;
+    }
+    // Error Check - NOT BOTH -e and -d
+    if ( p_args_obj.opt_dec_file_loc != null and p_args_obj.opt_enc_file_loc != null) {
+        return error.PROVIDED_ENC_AND_DEC_FILE;
+    }
+    
+    // check if file to enc or dec file exists
+    {
+        if ( p_args_obj.opt_enc_file_loc != null) std.fs.cwd().access( p_args_obj.opt_enc_file_loc.?, .{}) catch return error.ENC_FILE_LOC_NOT_REAL
+        else if ( p_args_obj.opt_dec_file_loc != null) std.fs.cwd().access( p_args_obj.opt_dec_file_loc.?, .{}) catch return error.DEC_FILE_LOC_NOT_REAL
+        else return error.ENC_OR_DEC_FILE_DNE;
+    }
 }
 
 /// DESCRIPTION
@@ -120,20 +132,15 @@ pub fn getOutputFileName() ![]const  u8 {
 /// Reads a password from the cli without echoing characters to the screen (toggle this option).
 ///
 /// PARAMETERS
-/// TBD
-// TODO: Add parameters to comment
-pub fn getPassword() !void {
-    // TODO: implement this
-}
+/// `p_pass_v1_buf` - Buffer to hold the captured password
+/// `stdout` - The file pointer to print to the console
+pub fn getPassword(p_pass_buf: *[tac.MAX_PASSWORD_SIZE_BYTES]u8, stdout: std.fs.File) ![]const u8 {
+    var password_stdin_reader: std.fs.File.Reader = std.fs.File.stdin().reader(p_pass_buf);
+    _ = try stdout.write("Enter Password: "); // print to console
+    const pass_len: usize = try password_stdin_reader.read(p_pass_buf); // read from user in console
+    const s_password: []const u8 = p_pass_buf.*[0..pass_len];
 
-/// DESCRIPTION
-/// Prompts the user to re-enter the password to confirm it is typed correctly.
-///
-/// PARAMETERS
-/// TBD
-// TODO: Add parameters to comment
-pub fn getPasswordConfirmation() !void {
-    // TODO: implement this
+    return s_password;
 }
 
 /// DESCRIPTION
