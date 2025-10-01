@@ -149,22 +149,10 @@ pub fn main() !void {
 
     // TODO: testing, testing, testing for EVERYTHING
     
-    // generate output file name (extension changing)
+    // TODO: generate output file name (extension changing)
     
-    // save data to new file
+    // TODO: save data to new file
 
-    _ = opt_encdec_file_dir;
-
-    // cleanup password RAM memory (avoid leaving password in RAM)
-    
-}
-
-/// DESCRIPTION
-/// A security function that securely overwrites sensitive data in memory i.e. passwords
-///
-/// PARAMETERS
-/// N/A
-fn cleanup() !void {
-    // TODO: implement this
+    _ = opt_encdec_file_dir; // save to this folder?
 
 }
