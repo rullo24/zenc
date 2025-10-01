@@ -1,7 +1,10 @@
 const std: type = @import("std");
 const builtin: type = @import("builtin");
 
-// STRUCT DEFINITIONS //
+//////////////////////////
+/// STRUCT DEFINITIONS ///
+//////////////////////////
+
 pub const ARGUMENT_STRUCT: type = struct {
     has_help: bool = false,
     opt_enc_file_loc: ?[]const u8 = null, // init as empty
@@ -9,6 +12,10 @@ pub const ARGUMENT_STRUCT: type = struct {
     opt_dec_file_loc: ?[]const u8 = null, // init as empty
     dec_buf: [MAX_PATH_SIZE]u8 = undefined,
 };
+
+////////////////////////////
+/// CONSTANT DEFINITIONS ///
+////////////////////////////
 
 // ===============================================
 // 1. SYSTEM / FILE CONSTANTS

@@ -2,7 +2,9 @@ const std: type = @import("std");
 const tac: type = @import("types_and_constants.zig");
 const packaging: type = @import("packaging.zig");
 
-// PUBLIC FUNCTIONS //
+////////////////////////////////////
+/// PUBLIC FUNCTION DECLARATIONS ///
+////////////////////////////////////
 
 /// DESCRIPTION
 /// Responsible for creating a crypto key from a user-entered password.

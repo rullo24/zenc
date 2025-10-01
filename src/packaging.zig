@@ -1,7 +1,9 @@
 const std = @import("std");
 const tac = @import("types_and_constants.zig");
 
+///////////////////////////
 /// STRUCT DECLARATIONS ///
+///////////////////////////
 
 pub const CIPHER_COMPONENTS = struct {
     magic_num: u64 = 0,
@@ -11,10 +13,18 @@ pub const CIPHER_COMPONENTS = struct {
     s_opt_payload: ?[]const u8 = null,
 };
 
+////////////////////////////////////
 /// PUBLIC FUNCTION DECLARATIONS ///
+////////////////////////////////////
 
-// TODO: write function header
-pub fn packEncryptionDataToOutputBuf(s_output_buf: []u8, s_ciphertext_buf: []const u8, p_salt: *const [tac.ZENC_SALT_SIZE]u8, p_nonce: *const [tac.NONCE_SIZE]u8, p_auth_tag: *const [tac.AUTH_TAG_SIZE]u8) []const u8 {
+/// DESCRIPTION
+/// Creates an encrypted output buffer slice for saving to a file from several crypto parameters
+///
+/// PARAMETERS
+/// `s_output_buf` - An allocated buffer for storing the output that the encryption data is packed into
+/// `s_ciphertext_buf` - A slice containing the encrypted content for save to file
+/// `p_cipher_comp` - A ptr to an obj that contains the salt, nonce and auth tag
+pub fn packEncryptionDataToOutputBuf(s_output_buf: []u8, s_ciphertext_buf: []const u8, p_cipher_comp: *CIPHER_COMPONENTS) []const u8 { 
     var offset: usize = 0;
     
     // 1. magic num
@@ -24,11 +34,11 @@ pub fn packEncryptionDataToOutputBuf(s_output_buf: []u8, s_ciphertext_buf: []con
     offset += @sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM));
 
     // 2. salt
-    @memcpy(s_output_buf[offset..offset+tac.ZENC_SALT_SIZE], p_salt); // write salt
+    @memcpy(s_output_buf[offset..offset+tac.ZENC_SALT_SIZE], &p_cipher_comp.salt); // write salt
     offset += tac.ZENC_SALT_SIZE;
 
     // 3. nonce
-    @memcpy(s_output_buf[offset..offset+tac.NONCE_SIZE], p_nonce); // write nonce
+    @memcpy(s_output_buf[offset..offset+tac.NONCE_SIZE], &p_cipher_comp.salt); // write nonce
     offset += tac.NONCE_SIZE;
 
     // 4. ciphertext
@@ -36,13 +46,17 @@ pub fn packEncryptionDataToOutputBuf(s_output_buf: []u8, s_ciphertext_buf: []con
     offset += s_ciphertext_buf.len;
 
     // 5. auth tag
-    @memcpy(s_output_buf[offset..offset+tac.AUTH_TAG_SIZE], p_auth_tag); // write auth tag
+    @memcpy(s_output_buf[offset..offset+tac.AUTH_TAG_SIZE], &p_cipher_comp.auth_tag); // write auth tag
     offset += tac.AUTH_TAG_SIZE;
 
     return s_output_buf[0..offset];
 }
 
-// TODO: write function header
+/// DESCRIPTION
+/// Creates a set a singular obj for holding all crypto items relevant to decryption
+///
+/// PARAMETERS
+/// s_raw_buf - The input, encrypted, raw data from the captured file to be decrypted
 pub fn packDecryptionDataToOutputBuf(s_raw_buf: []const u8) !CIPHER_COMPONENTS {
     var retrieved_components: CIPHER_COMPONENTS = .{};
     var offset: usize = 0;

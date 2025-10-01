@@ -1,6 +1,10 @@
 const std: type = @import("std");
 const tac: type = @import("types_and_constants.zig");
 
+////////////////////////////////////
+/// PUBLIC FUNCTION DECLARATIONS ///
+////////////////////////////////////
+
 /// DESCRIPTION
 /// Parses and validates cli args to determine the action to be performed on data.
 ///
@@ -107,26 +111,6 @@ pub fn validateArgsObj(p_args_obj: *tac.ARGUMENT_STRUCT) !void {
         else if ( p_args_obj.opt_dec_file_loc != null) std.fs.cwd().access( p_args_obj.opt_dec_file_loc.?, .{}) catch return error.DEC_FILE_LOC_NOT_REAL
         else return error.ENC_OR_DEC_FILE_DNE;
     }
-}
-
-/// DESCRIPTION
-/// Extract the filename from a file path
-///
-/// PARAMETERS
-/// TBD
-// TODO: Add parameters to comment
-pub fn getInputFileName() ![]const u8 {
-    // TODO: implement this
-}
-
-/// DESCRIPTION
-/// Generates a new filename (including extension) for the output based on the operation performed
-///
-/// PARAMETERS
-/// TBD
-// TODO: Add parameters to comment
-pub fn getOutputFileName() ![]const  u8 {
-    // TODO: implement this
 }
 
 /// DESCRIPTION

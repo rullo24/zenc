@@ -100,8 +100,10 @@ pub fn main() !void {
         // 6. encrypt raw contents into ciphertext buffer
         try cipher.encrypt(&enc_cipher_obj.nonce, &final_key, raw_buf, ciphertext_buf, &enc_cipher_obj.auth_tag);
 
+        // TODO: remove multiple obj req for both of these and encrypt
+
         // 7. write magic num, then salt, then nonce, then ciphertext, then auth tag to ciphertext buffer
-        s_opt_output_data = packaging.packEncryptionDataToOutputBuf(output_buf, ciphertext_buf, &enc_cipher_obj.salt, &enc_cipher_obj.nonce, &enc_cipher_obj.auth_tag);
+        s_opt_output_data = packaging.packEncryptionDataToOutputBuf(output_buf, ciphertext_buf, &enc_cipher_obj);
 
         // 8. destroying all crypto entries
         cipher.secureDestoryAllArgs( .{&password_v1, &password_v2, &final_key, &enc_cipher_obj} );
