@@ -50,13 +50,13 @@ pub fn encrypt(p_nonce: *[tac.NONCE_SIZE]u8, p_key: *[tac.SHA256_BYTE_SIZE]u8, p
 
 
 /// DESCRIPTION
-/// Handles all decryption logic. Validates the file and verifies the auth tag.
+/// Handles all decryption logic. Validates the file and verifies the auth tag. Returns a slice of the decrypted plaintext buf.
 /// PARAMETERS
 /// `plaintext_buf` - A buffer which the decrypted text will be placed in
 /// `ciphertext` - A slice that holds the encrypted data for decrypting
 /// `p_retrieved` - A struct that contains the cipher components for encryption and decryption
 /// `p_key` - Generated from the password(s) + salt, the key is used to decrypt the file
-pub fn decrypt(plaintext_buf: []u8, p_retrieved: *packaging.CIPHER_COMPONENTS, p_key: *[tac.SHA256_BYTE_SIZE]u8) !void {
+pub fn decrypt(plaintext_buf: []u8, p_retrieved: *packaging.CIPHER_COMPONENTS, p_key: *[tac.SHA256_BYTE_SIZE]u8) ![]const u8 {
 
     if (p_retrieved.s_opt_payload == null) return error.NULL_DECRYPTION_PAYLOAD;
     
@@ -72,6 +72,25 @@ pub fn decrypt(plaintext_buf: []u8, p_retrieved: *packaging.CIPHER_COMPONENTS, p
         p_retrieved.nonce, // npub: input nonce
         p_key.*, // key: input cipher key (from password)
     );
+
+    return plaintext_buf[0..p_retrieved.s_opt_payload.?.len];
 }
 
-// PRIVATE FUNCTIONS //
+/// DESCRIPTION
+/// Compile time, single line function for calling secureZero on all arguments. All arguments must be parsed as pointers.
+/// PARAMETERS
+/// `args` - Unknown num of ptr arguments that are treated as tuple (captured at comptime)
+pub fn secureDestoryAllArgs(args: anytype) void {
+
+    // inline forces compiler to unravel loop at comptime
+    inline for (args) |p_argument| { 
+
+        // 1. for each arg, capture a standardised pointer
+        const p_volatile_mem: [*]volatile u8 = @ptrFromInt(@intFromPtr(p_argument)); // capture all argument types as same type
+        const curr_arg_size: usize = @sizeOf(@TypeOf(p_argument));
+
+        // 2. create slice from ptr and length and cryptographically delete the memory
+        const s_curr_arg_bytes: []volatile u8 = p_volatile_mem[0..curr_arg_size];
+        std.crypto.secureZero(u8, s_curr_arg_bytes); // zero all memory from current argument
+    }
+}
