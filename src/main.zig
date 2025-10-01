@@ -83,8 +83,6 @@ pub fn main() !void {
         var pass_v2_buf: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
         const password_v2: []const u8 = try cli.getPassword(&pass_v2_buf, stdout);
         
-        std.debug.print("{s} | {s}", .{password_v1, password_v2});
-
         // 2. compare password_v1 and password_v2 --> throw error if these don't match
         if (std.mem.eql(u8, password_v1, password_v2) != true) return error.PASSWORDS_DO_NOT_MATCH;
 

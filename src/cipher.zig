@@ -35,7 +35,7 @@ pub fn deriveKeyFromPass(password: []const u8, p_salt: *const [tac.ZENC_SALT_SIZ
 pub fn encrypt(p_nonce: *[tac.NONCE_SIZE]u8, p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext: []const u8, ciphertext_buf: []u8, p_tag: *[tac.AUTH_TAG_SIZE]u8) !void {
 
     // check that the output buffer is capable of receiving data
-    if (ciphertext_buf.len <= plaintext.len) return error.CIPHERTEXT_BUF_TOO_SMALL_FOR_ENC;
+    if (ciphertext_buf.len < plaintext.len) return error.CIPHERTEXT_BUF_TOO_SMALL_FOR_ENC;
 
     // run std lib encryption method --> generates auth tag and ciphertext for writing to file w/ nonce
     std.crypto.aead.aes_gcm.Aes256Gcm.encrypt(
