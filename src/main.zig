@@ -16,7 +16,10 @@ pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const alloc: std.mem.Allocator = gpa.allocator();
     defer _ = gpa.deinit();
-    const stdout: std.fs.File = std.fs.File.stdout();
+
+    // using stdout for writing
+    var stdout_writer: std.fs.File.Writer = std.fs.File.stdout().writer(&.{});
+    const stdout: *std.Io.Writer = &stdout_writer.interface; 
 
     // capture args from user --> move args into zenc variables
     var args_obj: tac.ARGUMENT_STRUCT = tac.ARGUMENT_STRUCT{}; // to store arguments in easy-to-read format
@@ -66,7 +69,7 @@ pub fn main() !void {
     const output_size: usize = (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + ciphertext_buf.len + tac.AUTH_TAG_SIZE);
     const output_buf: []u8 = try alloc.alloc(u8, output_size);
     defer alloc.free(output_buf);
-    var s_output_data: []const u8 = undefined; // holds slice from output_buf that contains the final data
+    var s_opt_output_data: ?[]const u8 = null; // holds slice from output_buf that contains the final data
 
     // --- ENCRYPTION/DECRYPTION BRANCHING --- //
 
@@ -74,10 +77,13 @@ pub fn main() !void {
     if (args_obj.opt_enc_file_loc != null) {
         
         _ = try stdout.write("\n=== ENCRYPTION MODE SET ===\n");
+        try stdout.flush();
 
         // 1. reconfirm entered password
         var pass_v2_buf: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
         const password_v2: []const u8 = try cli.getPassword(&pass_v2_buf, stdout);
+        
+        std.debug.print("{s} | {s}", .{password_v1, password_v2});
 
         // 2. compare password_v1 and password_v2 --> throw error if these don't match
         if (std.mem.eql(u8, password_v1, password_v2) != true) return error.PASSWORDS_DO_NOT_MATCH;
@@ -97,17 +103,19 @@ pub fn main() !void {
         try cipher.encrypt(&enc_cipher_obj.nonce, &final_key, raw_buf, ciphertext_buf, &enc_cipher_obj.auth_tag);
 
         // 7. write magic num, then salt, then nonce, then ciphertext, then auth tag to ciphertext buffer
-        s_output_data = packaging.packEncryptionDataToOutputBuf(output_buf, ciphertext_buf, &enc_cipher_obj.salt, &enc_cipher_obj.nonce, &enc_cipher_obj.auth_tag);
+        s_opt_output_data = packaging.packEncryptionDataToOutputBuf(output_buf, ciphertext_buf, &enc_cipher_obj.salt, &enc_cipher_obj.nonce, &enc_cipher_obj.auth_tag);
 
         // 8. destroying all crypto entries
         cipher.secureDestoryAllArgs( .{&password_v1, &password_v2, &final_key, &enc_cipher_obj} );
 
         _ = try stdout.write("\n=== ENCRYPTION COMPLETED SUCCESSFULLY ===\n");
+        try stdout.flush();
 
     // IF DECRYPTION
     } else if (args_obj.opt_dec_file_loc != null) { 
 
         _ = try stdout.write("=== DECRYPTION MODE SET ===\n");
+        try stdout.flush();
 
         // 1. basic file check to see if file can hold all non-ciphertext info
         if (file_size < (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL; 
@@ -124,7 +132,7 @@ pub fn main() !void {
         const dec_buf: []const u8 = output_buf[0..retrieved_components.s_opt_payload.?.len];
 
         // 5. decrypt file contents and verify auth tag
-        s_output_data = try cipher.decrypt(
+        s_opt_output_data = try cipher.decrypt(
             @constCast(dec_buf),
             @constCast(&retrieved_components),
             &final_key,
@@ -134,6 +142,8 @@ pub fn main() !void {
         cipher.secureDestoryAllArgs( .{&password_v1, &final_key, &retrieved_components} );
     }
 
+    // ensuring that data was written to the output location
+    if (s_opt_output_data == null) return error.FAILED_TO_SAVE_CRYPTO_OPERATION_TO_OUTPUT_BUF;
 
     // TODO: file decrypted straight after encryption --> check auth tag and nonce work
 

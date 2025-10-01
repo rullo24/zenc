@@ -16,6 +16,10 @@ pub fn build(b: *std.Build) !void {
     });
     b.installArtifact(exe);
 
+    // --- CUSTOM RUN STEP FOR DEBUGGING --- ///
+
+    // TODO: 
+
     // TESTING //
     
     // TODO: add test cases

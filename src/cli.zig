@@ -71,7 +71,7 @@ pub fn parseArgs(p_arg_struct: *tac.ARGUMENT_STRUCT, args: []const [:0]u8) !void
 ///
 /// PARAMETERS
 /// `p_file_handle` - File to print to (this should usually be stdout)
-pub fn printHelp(p_file_handle: std.fs.File) !void {
+pub fn printHelp(p_file_handle: *std.Io.Writer) !void {
     const help_menu: []const u8 = 
     \\ === USAGE ===
     \\ ./zenc [OPTIONS]
@@ -83,6 +83,7 @@ pub fn printHelp(p_file_handle: std.fs.File) !void {
     ;
 
     try p_file_handle.writeAll(help_menu);
+    try p_file_handle.flush();
 }
 
 /// DESCRIPTION
@@ -134,11 +135,16 @@ pub fn getOutputFileName() ![]const  u8 {
 /// PARAMETERS
 /// `p_pass_v1_buf` - Buffer to hold the captured password
 /// `stdout` - The file pointer to print to the console
-pub fn getPassword(p_pass_buf: *[tac.MAX_PASSWORD_SIZE_BYTES]u8, stdout: std.fs.File) ![]const u8 {
+pub fn getPassword(p_pass_buf: *[tac.MAX_PASSWORD_SIZE_BYTES]u8, stdout: *std.Io.Writer) ![]const u8 {
+
+    // creating stdin reader and prompting user for password
     var password_stdin_reader: std.fs.File.Reader = std.fs.File.stdin().reader(p_pass_buf);
-    _ = try stdout.write("Enter Password: "); // print to console
-    const pass_len: usize = try password_stdin_reader.read(p_pass_buf); // read from user in console
-    const s_password: []const u8 = p_pass_buf.*[0..pass_len];
+    const stdin: *std.Io.Reader = &password_stdin_reader.interface;
+    _ = try stdout.writeAll("Enter Password: "); // print to console
+    try stdout.flush();
+
+    // reading from the user (stdin)
+    const s_password: []const u8 = try stdin.takeDelimiterExclusive('\n'); // read from user in console
 
     return s_password;
 }
