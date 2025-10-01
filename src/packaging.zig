@@ -4,6 +4,7 @@ const tac = @import("types_and_constants.zig");
 /// STRUCT DECLARATIONS ///
 
 pub const CIPHER_COMPONENTS = struct {
+    magic_num: u64 = 0,
     salt: [tac.ZENC_SALT_SIZE]u8 = undefined,
     nonce: [tac.NONCE_SIZE]u8 = undefined,
     auth_tag: [tac.AUTH_TAG_SIZE]u8 = undefined,
@@ -44,25 +45,34 @@ pub fn packEncryptionDataToOutputBuf(s_output_buf: []u8, s_ciphertext_buf: []con
 // TODO: write function header
 pub fn packDecryptionDataToOutputBuf(s_raw_buf: []const u8) !CIPHER_COMPONENTS {
     var retrieved_components: CIPHER_COMPONENTS = .{};
-    var offset: usize = @sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)); // skip magic num
+    var offset: usize = 0;
+
+    // verify magic num in raw file data
+    const zenc_magic_num_type_size: usize = @sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM));
+
+    const retrieved_magic_num_slice: []const u8 = s_raw_buf[ offset..offset+zenc_magic_num_type_size];
+    offset += zenc_magic_num_type_size;
+    if ( retrieved_magic_num_slice.len != zenc_magic_num_type_size ) return error.RETRIEVED_MAGIC_NUM_WEIRD_SIZE;
+    const p_retrieved_magic_num_buf: *[zenc_magic_num_type_size]u8 = @constCast(@ptrCast(retrieved_magic_num_slice));
+
+    // assigning magic num to struct obj
+    retrieved_components.magic_num = std.mem.readInt(u64, p_retrieved_magic_num_buf, tac.ZENC_ENDIAN_TYPE);
+    if (retrieved_components.magic_num != tac.ZENC_MAGIC_NUM) return error.TRIED_TO_DECRYPT_NON_ZENC_FILE;
 
     // store salt from file
-
-    // TODO: convert to [16]u8 type for storage
-    
-    const retrieved_salt: []const u8  = s_raw_buf[offset..offset+tac.ZENC_SALT_SIZE];
+    const retrieved_salt: []const u8  = s_raw_buf[ offset..offset+tac.ZENC_SALT_SIZE ];
     if (retrieved_salt.len != retrieved_components.salt.len) return error.RETRIEVED_SALT_WONT_FIT_IN_COMP_BUF;
     @memcpy(&retrieved_components.salt, retrieved_salt);
     offset += tac.ZENC_SALT_SIZE;
 
     // store nonce from file
-    const retrieved_nonce: []const u8 = s_raw_buf[offset..offset+tac.NONCE_SIZE];
+    const retrieved_nonce: []const u8 = s_raw_buf[ offset..offset+tac.NONCE_SIZE ];
     if (retrieved_nonce.len != retrieved_components.nonce.len) return error.RETRIEVED_NONCE_WONT_FIT_IN_COMP_BUF;
     @memcpy(&retrieved_components.nonce, retrieved_nonce);
     offset += tac.NONCE_SIZE;
 
     // store encrypted data from file
-    const retrieved_payload: []const u8 = s_raw_buf[offset..offset+(s_raw_buf.len-tac.AUTH_TAG_SIZE+1)];
+    const retrieved_payload: []const u8 = s_raw_buf[ offset..offset+(s_raw_buf.len-tac.AUTH_TAG_SIZE+1) ];
     retrieved_components.s_opt_payload = retrieved_payload;
     offset += (s_raw_buf.len - tac.AUTH_TAG_SIZE) + 1;
 

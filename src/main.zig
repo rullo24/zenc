@@ -81,7 +81,12 @@ pub fn main() !void {
         // compare password_v1 and password_v2 --> throw error if these don't match
         if (std.mem.eql(u8, password_v1, password_v2) != true) return error.PASSWORDS_DO_NOT_MATCH;
 
+
+
         // TODO: smash password_v2 cryptographically after the if statement is passed
+
+
+
         var enc_cipher_obj: packaging.CIPHER_COMPONENTS = .{}; // holds nonce, salt and auth tag
 
         // generating nonce to "jumble encryption"
@@ -105,19 +110,12 @@ pub fn main() !void {
     } else if (args_obj.opt_dec_file_loc != null) { 
 
         _ = try stdout.write("=== DECRYPTION MODE SET ===\n");
+        if (file_size < (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL; // basic file size check
 
-        // 1. verify magic num in raw file data
-        if (file_size < (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL;
-        const retrieved_magic_num_slice: []const u8 = raw_buf[0..@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM))];
-        if (retrieved_magic_num_slice.len != 8) return error.RETRIEVED_MAGIC_NUM_WEIRD_SIZE;
-        const p_retrieved_magic_num_buf: *[8]u8 = @constCast(@ptrCast(retrieved_magic_num_slice));
-        const retrieved_magic_num: u64 = std.mem.readInt(u64, p_retrieved_magic_num_buf, tac.ZENC_ENDIAN_TYPE);
-        if (retrieved_magic_num != tac.ZENC_MAGIC_NUM) return error.TRIED_TO_DECRYPT_NON_ZENC_FILE;
-
-        // 2. extract salt, nonce, encrypted text and auth tag from file
+        // extract magic num, salt, nonce, encrypted text and auth tag from file
         const retrieved_components: packaging.CIPHER_COMPONENTS = try packaging.packDecryptionDataToOutputBuf(raw_buf);
  
-        // 3. generate crypto key using extracted salt
+        // generate crypto key using extracted salt
         var final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
         try cipher.deriveKeyFromPass(password_v1, &retrieved_components.salt, &final_key);
 
