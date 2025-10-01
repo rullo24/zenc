@@ -98,9 +98,7 @@ pub fn main() !void {
         try cipher.deriveKeyFromPass(password_v1, &enc_cipher_obj.salt, &final_key); // moving crypto key into `final_key`
 
         // 6. encrypt raw contents into ciphertext buffer
-        try cipher.encrypt(&enc_cipher_obj.nonce, &final_key, raw_buf, ciphertext_buf, &enc_cipher_obj.auth_tag);
-
-        // TODO: remove multiple obj req for both of these and encrypt
+        try cipher.encrypt(&final_key, raw_buf, ciphertext_buf, &enc_cipher_obj);
 
         // 7. write magic num, then salt, then nonce, then ciphertext, then auth tag to ciphertext buffer
         s_opt_output_data = packaging.packEncryptionDataToOutputBuf(output_buf, ciphertext_buf, &enc_cipher_obj);
