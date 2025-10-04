@@ -28,8 +28,8 @@ pub fn packEncryptionDataToOutputBuf(s_output_buf: []u8, s_ciphertext_buf: []con
     var offset: usize = 0;
     
     // 1. magic num
-    const magic_num_slice_to_write: []const u8 = s_output_buf[offset..offset + @sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM))];
-    const p_eight_byte_aligned_magic_num: *[8]u8 = @constCast(@ptrCast(@alignCast(magic_num_slice_to_write)));
+    const magic_num_slice_loc_to_write: []const u8 = s_output_buf[offset..offset + @sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM))];
+    const p_eight_byte_aligned_magic_num: *[8]u8 = @constCast(@ptrCast(@alignCast(magic_num_slice_loc_to_write)));
     std.mem.writeInt(u64, p_eight_byte_aligned_magic_num, tac.ZENC_MAGIC_NUM, tac.ZENC_ENDIAN_TYPE); // writing magic num
     offset += @sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM));
 
@@ -38,7 +38,7 @@ pub fn packEncryptionDataToOutputBuf(s_output_buf: []u8, s_ciphertext_buf: []con
     offset += tac.ZENC_SALT_SIZE;
 
     // 3. nonce
-    @memcpy(s_output_buf[offset..offset+tac.NONCE_SIZE], &p_cipher_comp.salt); // write nonce
+    @memcpy(s_output_buf[offset..offset+tac.NONCE_SIZE], &p_cipher_comp.nonce); // write nonce
     offset += tac.NONCE_SIZE;
 
     // 4. ciphertext
