@@ -9,7 +9,7 @@ pub fn build(b: *std.Build) !void {
         .name = "zenc",
         .root_module = b.createModule(.{
             .root_source_file = b.path("./src/main.zig"),
-            .strip = true, // remove all debug symbols
+            .strip = false,
             .optimize = def_optimise,
             .target = def_target,
         })
