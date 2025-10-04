@@ -38,13 +38,7 @@ pub fn main() !void {
         try cli.printHelp(stdout); // print help menu on faulty argument parse
         return; // end program after printing help
     };
-    
-    // get file directory from path
-    const opt_encdec_file_dir: ?[]const u8 = 
-        if (args_obj.opt_enc_file_loc != null) std.fs.path.dirname(args_obj.opt_enc_file_loc.?) 
-        else if (args_obj.opt_dec_file_loc != null) std.fs.path.dirname(args_obj.opt_dec_file_loc.?) 
-        else return error.ENC_OR_DEC_FILE_DNE;
- 
+     
     // capture password from stdin (user input)
     var pass_v1_buf: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
     const password_v1: []const u8 = try cli.getPassword(&pass_v1_buf, stdout);
@@ -146,6 +140,14 @@ pub fn main() !void {
     // ensuring that data was written to the output location
     if (s_opt_output_data == null) return error.FAILED_TO_SAVE_CRYPTO_OPERATION_TO_OUTPUT_BUF;
 
+    // get file directory from path
+    const opt_encdec_file_dir: ?[]const u8 = 
+        if (args_obj.opt_enc_file_loc != null) std.fs.path.dirname(args_obj.opt_enc_file_loc.?) 
+        else if (args_obj.opt_dec_file_loc != null) std.fs.path.dirname(args_obj.opt_dec_file_loc.?) 
+        else return error.ENC_OR_DEC_FILE_DNE;
+
+    _ = opt_encdec_file_dir;
+
     // TODO: file decrypted straight after encryption --> check auth tag and nonce work
 
     // TODO: split main function portions out into sub functions
@@ -156,6 +158,5 @@ pub fn main() !void {
     
     // TODO: save data to new file
 
-    _ = opt_encdec_file_dir; // save to this folder?
 
 }
