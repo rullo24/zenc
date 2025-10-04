@@ -34,7 +34,10 @@ pub fn main() !void {
     }
     
     // check for sufficient arguments parsed by user to continue
-    try cli.validateArgsObj(&args_obj);
+    cli.validateArgsObj(&args_obj) catch {
+        try cli.printHelp(stdout); // print help menu on faulty argument parse
+        return; // end program after printing help
+    };
     
     // get file directory from path
     const opt_encdec_file_dir: ?[]const u8 = 
