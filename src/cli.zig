@@ -26,6 +26,10 @@ pub fn parseArgs(p_arg_struct: *tac.ARGUMENT_STRUCT, args: []const [:0]u8) !void
 
             p_arg_struct.has_help = true;
 
+        } else if(std.mem.eql(u8, arg_non_sentinel, "--dont_check_enc")) {
+
+            p_arg_struct.should_check_enc_data = false;
+
         } else if (arg_non_sentinel.len > tac.MIN_OTHER_FLAG_AVAILABLE_LEN) { // only check for file flags are definitely available (larger than prerequisite size)
 
             // capturing letter that tells whether to perform encryption or decryption i.e. 'e'
@@ -85,6 +89,7 @@ pub fn printHelp(p_file_handle: *std.Io.Writer) !void {
     \\ -h OR --help -> Prints this help menu
     \\ -e=<file_to_encrypt> -> Encrypt file
     \\ -d=<file_to_decrypt> -> Decrypt file
+    \\ --dont_check_enc -> Stop immediate encrypted file decryption check (increase speed).
     ;
 
     try p_file_handle.writeAll(help_menu);

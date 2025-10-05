@@ -97,17 +97,28 @@ pub fn main() !void {
         // 7. write magic num, then salt, then nonce, then ciphertext, then auth tag to ciphertext buffer
         s_opt_output_data = packaging.packEncryptionDataToOutputBuf(s_output_buf, s_ciphertext_buf, &enc_cipher_obj);
 
-        
+        // -- START SELF TEST ENCRYPTED DATA -- //
+        if (args_obj.should_check_enc_data == true) {
+            const s_test_dec_buf: []u8 = try alloc.alloc(u8, file_size);
+            defer alloc.free(s_test_dec_buf);
 
+            // create component for immediate decryption test
+            var test_dec_components: packaging.CIPHER_COMPONENTS = enc_cipher_obj;
+            test_dec_components.s_opt_payload = s_ciphertext_buf;
+            
+            // decrypt data that was just encrypted
+            const s_test_dec_data: []const u8 = try cipher.decrypt(
+                s_test_dec_buf, // buffer to write the plaintext into
+                &test_dec_components,
+                &b_final_key,
+            );
 
+            // 8. Compare the decrypted data against the original raw file data.
+            if (!std.mem.eql(u8, s_raw_buf, s_test_dec_data)) return error.ENCRYPTION_SELF_TEST_FAILED; // if this check fails, the encryption/decryption round-trip is broken.
+        }
+        // -- END SELF TEST ENCRYPTED DATA -- //
 
-        // TODO: file decrypted straight after encryption --> check auth tag and nonce work
-
-
-
-
-
-        // 8. destroying all crypto entries
+        // 9. destroying all crypto entries
         cipher.secureDestoryAllArgs( .{&s_password_v1, &s_password_v2, &b_final_key, &enc_cipher_obj} );
 
         _ = try io_stdout_writer.write("\n=== ENCRYPTION COMPLETED SUCCESSFULLY ===\n");
@@ -193,11 +204,15 @@ pub fn main() !void {
 
     } else return error.NO_OUTPUT_DATA_TO_WRITE_TO_NEW_FILE;
 
-
+    // ensure all CONFIDENTIAL buffers are destroyed
+    cipher.secureDestoryAllArgs(.{&s_output_buf, &s_ciphertext_buf, &s_raw_buf}); 
 
     // TODO: testing, testing, testing for EVERYTHING
 
+    // TODO: add status messages throughout program, EVERYWHERE
 
     // FIXME: multiple encryptions and then decryptions doesn't get back to original data
+
+    // FIXME: secureDestoryAllArgs func doesn't properly destory buffers or slices
 
 }
