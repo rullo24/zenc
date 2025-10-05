@@ -17,9 +17,9 @@ pub fn main() !void {
     const alloc: std.mem.Allocator = gpa.allocator();
     defer _ = gpa.deinit();
 
-    // using stdout for writing
-    var stdout_writer: std.fs.File.Writer = std.fs.File.stdout().writer(&.{});
-    const stdout: *std.Io.Writer = &stdout_writer.interface; 
+    // using io_stdout_writer for writing
+    var fs_stdout_writer: std.fs.File.Writer = std.fs.File.stdout().writer(&.{});
+    const io_stdout_writer: *std.Io.Writer = &fs_stdout_writer.interface; 
 
     // capture args from user --> move args into zenc variables
     var args_obj: tac.ARGUMENT_STRUCT = tac.ARGUMENT_STRUCT{}; // to store arguments in easy-to-read format
@@ -29,59 +29,59 @@ pub fn main() !void {
 
     // check if help flag is in captured args
     if (args_obj.has_help == true) {
-        try cli.printHelp(stdout);
+        try cli.printHelp(io_stdout_writer);
         return; // end program after printing help
     }
     
     // check for sufficient arguments parsed by user to continue
     cli.validateArgsObj(&args_obj) catch {
-        try cli.printHelp(stdout); // print help menu on faulty argument parse
+        try cli.printHelp(io_stdout_writer); // print help menu on faulty argument parse
         return; // end program after printing help
     };
      
     // capture password from stdin (user input)
-    var pass_v1_buf: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
-    const password_v1: []const u8 = try cli.getPassword(&pass_v1_buf, stdout);
+    var b_pass_v1: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
+    const s_password_v1: []const u8 = try cli.getPassword(&b_pass_v1, io_stdout_writer);
 
     // capture file object from available item
-    const p_file: std.fs.File = 
+    const p_in_file: std.fs.File = 
         if (args_obj.opt_enc_file_loc != null) try std.fs.cwd().openFile(args_obj.opt_enc_file_loc.?, .{.mode = .read_only})
         else if (args_obj.opt_dec_file_loc != null) try std.fs.cwd().openFile(args_obj.opt_dec_file_loc.?, .{.mode = .read_only})
         else return error.ENC_OR_DEC_FILE_DNE;
-    defer p_file.close(); // free file descriptor memory
+    defer p_in_file.close(); // free file descriptor memory
 
     // read file contents into buffer (heaped)
-    const file_size: u64 = try p_file.getEndPos();
+    const file_size: u64 = try p_in_file.getEndPos();
     const raw_buf: []u8 = try alloc.alloc(u8, file_size); // heap buffer to store file bytes
     defer alloc.free(raw_buf); // free copied file bytes on program exit
-    _ = try p_file.read(raw_buf); // reading unencrypted file data into raw buf
+    _ = try p_in_file.read(raw_buf); // reading unencrypted file data into raw buf
 
-    // FIXME: ciphertext_buf size will be as large as file_size in decrypt (not same size as when enc happens due to added baggage)
+    // FIXME: s_ciphertext_buf size will be as large as file_size in decrypt (not same size as when enc happens due to added baggage)
 
     // building buf for cipher text (encrypted)
-    const ciphertext_buf: []u8 = try alloc.alloc(u8, file_size); // to be parsed to encrypt method for capturing contents
-    defer alloc.free(ciphertext_buf);
+    const s_ciphertext_buf: []u8 = try alloc.alloc(u8, file_size); // to be parsed to encrypt method for capturing contents
+    defer alloc.free(s_ciphertext_buf);
 
     // building buf for output file text (NONCE + ciphertext + AUTH_TAG)
-    const output_size: usize = (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + ciphertext_buf.len + tac.AUTH_TAG_SIZE);
-    const output_buf: []u8 = try alloc.alloc(u8, output_size);
-    defer alloc.free(output_buf);
-    var s_opt_output_data: ?[]const u8 = null; // holds slice from output_buf that contains the final data
+    const output_size: usize = (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + s_ciphertext_buf.len + tac.AUTH_TAG_SIZE);
+    const s_output_buf: []u8 = try alloc.alloc(u8, output_size);
+    defer alloc.free(s_output_buf);
+    var s_opt_output_data: ?[]const u8 = null; // holds slice from s_output_buf that contains the final data
 
     // --- ENCRYPTION/DECRYPTION BRANCHING --- //
 
     // IF ENCRYPTION
     if (args_obj.opt_enc_file_loc != null) {
         
-        _ = try stdout.write("\n=== ENCRYPTION MODE SET ===\n");
-        try stdout.flush();
+        _ = try io_stdout_writer.write("\n=== ENCRYPTION MODE SET ===\n");
+        try io_stdout_writer.flush();
 
         // 1. reconfirm entered password
-        var pass_v2_buf: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
-        const password_v2: []const u8 = try cli.getPassword(&pass_v2_buf, stdout);
+        var b_pass_v2: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
+        const s_password_v2: []const u8 = try cli.getPassword(&b_pass_v2, io_stdout_writer);
         
-        // 2. compare password_v1 and password_v2 --> throw error if these don't match
-        if (std.mem.eql(u8, password_v1, password_v2) != true) return error.PASSWORDS_DO_NOT_MATCH;
+        // 2. compare s_password_v1 and s_password_v2 --> throw error if these don't match
+        if (std.mem.eql(u8, s_password_v1, s_password_v2) != true) return error.PASSWORDS_DO_NOT_MATCH;
 
         // 3. create cipher components obj for holding salt, nonce, etc.
         var enc_cipher_obj: packaging.CIPHER_COMPONENTS = .{}; // holds nonce, salt and auth tag
@@ -90,27 +90,27 @@ pub fn main() !void {
         std.crypto.random.bytes(&enc_cipher_obj.nonce); // reading random bytes into the nonce buffer
 
         // 5. generate crypto key from password and salt
-        var final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
+        var b_final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
         std.crypto.random.bytes(&enc_cipher_obj.salt); // scramble entire salt buffer for maximised-randomness crypto algo
-        try cipher.deriveKeyFromPass(password_v1, &enc_cipher_obj.salt, &final_key); // moving crypto key into `final_key`
+        try cipher.deriveKeyFromPass(s_password_v1, &enc_cipher_obj.salt, &b_final_key); // moving crypto key into `b_final_key`
 
         // 6. encrypt raw contents into ciphertext buffer
-        try cipher.encrypt(&final_key, raw_buf, ciphertext_buf, &enc_cipher_obj);
+        try cipher.encrypt(&b_final_key, raw_buf, s_ciphertext_buf, &enc_cipher_obj);
 
         // 7. write magic num, then salt, then nonce, then ciphertext, then auth tag to ciphertext buffer
-        s_opt_output_data = packaging.packEncryptionDataToOutputBuf(output_buf, ciphertext_buf, &enc_cipher_obj);
+        s_opt_output_data = packaging.packEncryptionDataToOutputBuf(s_output_buf, s_ciphertext_buf, &enc_cipher_obj);
 
         // 8. destroying all crypto entries
-        cipher.secureDestoryAllArgs( .{&password_v1, &password_v2, &final_key, &enc_cipher_obj} );
+        cipher.secureDestoryAllArgs( .{&s_password_v1, &s_password_v2, &b_final_key, &enc_cipher_obj} );
 
-        _ = try stdout.write("\n=== ENCRYPTION COMPLETED SUCCESSFULLY ===\n");
-        try stdout.flush();
+        _ = try io_stdout_writer.write("\n=== ENCRYPTION COMPLETED SUCCESSFULLY ===\n");
+        try io_stdout_writer.flush();
 
     // IF DECRYPTION
     } else if (args_obj.opt_dec_file_loc != null) { 
 
-        _ = try stdout.write("=== DECRYPTION MODE SET ===\n");
-        try stdout.flush();
+        _ = try io_stdout_writer.write("=== DECRYPTION MODE SET ===\n");
+        try io_stdout_writer.flush();
 
         // 1. basic file check to see if file can hold all non-ciphertext info
         if (file_size < (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL_FOR_ZENC_FILE; 
@@ -119,34 +119,67 @@ pub fn main() !void {
         const retrieved_components: packaging.CIPHER_COMPONENTS = try packaging.packDecryptionDataToOutputBuf(raw_buf);
  
         // 3. generate crypto key using extracted salt
-        var final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
-        try cipher.deriveKeyFromPass(password_v1, &retrieved_components.salt, &final_key);
+        var b_final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
+        try cipher.deriveKeyFromPass(s_password_v1, &retrieved_components.salt, &b_final_key);
 
         // 4. define bounds of ciphertext buf for decrypted data placement
         if (retrieved_components.s_opt_payload == null) return error.NULL_DECRYPTION_PAYLOAD;
-        const dec_buf: []const u8 = output_buf[0..retrieved_components.s_opt_payload.?.len];
+        const dec_buf: []const u8 = s_output_buf[0..retrieved_components.s_opt_payload.?.len];
 
         // 5. decrypt file contents and verify auth tag
         s_opt_output_data = try cipher.decrypt(
             @constCast(dec_buf),
             @constCast(&retrieved_components),
-            &final_key,
+            &b_final_key,
         );
 
         // 6. destory all cryptographic entries
-        cipher.secureDestoryAllArgs( .{&password_v1, &final_key, &retrieved_components} );
+        cipher.secureDestoryAllArgs( .{&s_password_v1, &b_final_key, &retrieved_components} );
     }
 
     // ensuring that data was written to the output location
-    if (s_opt_output_data == null) return error.FAILED_TO_SAVE_CRYPTO_OPERATION_TO_OUTPUT_BUF;
+    if (s_opt_output_data == null) return error.FAILED_TO_SAVE_CRYPTO_OPERATION_TO_s_output_buf;
+
+    // get basename of parsed file for adding enc or dec extension to
+    const s_encdec_basename: []const u8 =
+        if (args_obj.opt_enc_file_loc != null) std.fs.path.basename(args_obj.opt_enc_file_loc.?)
+        else if (args_obj.opt_dec_file_loc != null) std.fs.path.basename(args_obj.opt_dec_file_loc.?) 
+        else return error.ENC_OR_DEC_FILE_DNE;
 
     // get file directory from path
-    const opt_encdec_file_dir: ?[]const u8 = 
+    const s_opt_encdec_file_dir_loc: ?[]const u8 = 
         if (args_obj.opt_enc_file_loc != null) std.fs.path.dirname(args_obj.opt_enc_file_loc.?) 
         else if (args_obj.opt_dec_file_loc != null) std.fs.path.dirname(args_obj.opt_dec_file_loc.?) 
         else return error.ENC_OR_DEC_FILE_DNE;
+    if (s_opt_encdec_file_dir_loc == null) return error.NULL_FILE_DIRECTORY_CANNOT_SAVE;
 
-    _ = opt_encdec_file_dir;
+    // creating new basename w/ zenc extension for saved file
+    const s_new_basename: []const u8 = 
+        if (args_obj.opt_enc_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.ezenc", .{s_encdec_basename})
+        else if (args_obj.opt_dec_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.dzenc", .{s_encdec_basename})
+        else return error.ENC_OR_DEC_FILE_DNE;
+    defer alloc.free(s_new_basename);
+
+    // capturing new save location from parsed directory and filename
+    const s_new_save_loc: []const u8 = 
+        if (args_obj.opt_enc_file_loc != null) try std.fs.path.join(alloc, &[_][]const u8{s_opt_encdec_file_dir_loc.?, s_new_basename})
+        else if (args_obj.opt_dec_file_loc != null) try std.fs.path.join(alloc, &[_][]const u8{s_opt_encdec_file_dir_loc.?, s_new_basename})
+        else return error.ENC_OR_DEC_FILE_DNE;
+    defer alloc.free(s_new_save_loc); // free heaped memory on program close
+
+    // saving cipher calculated text to a file
+    if (s_opt_output_data) |s_output_data| {
+        const p_out_file: std.fs.File = try std.fs.cwd().createFile(s_new_save_loc, .{}); // overwrites prev file if exists 
+        defer p_out_file.close(); // close after local scope finishes
+
+        // writing to file
+        var b_file_out_write: [tac.WRITE_TO_FILE_WRITER_BUF_SIZE]u8 = undefined;
+        var fs_file_out_writer: std.fs.File.Writer = p_out_file.writer(&b_file_out_write);
+        var io_file_out_writer: *std.Io.Writer = &fs_file_out_writer.interface;
+        try io_file_out_writer.writeAll(s_output_data); // write all buffer info from cipher buffer + other parts to output buffer
+    }
+
+
 
     // TODO: file decrypted straight after encryption --> check auth tag and nonce work
 

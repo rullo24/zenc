@@ -23,6 +23,7 @@ pub const ARGUMENT_STRUCT: type = struct {
 const MAX_PATH_SIZE: comptime_int = if (builtin.os.tag == .windows) std.os.windows.MAX_PATH else std.posix.PATH_MAX;
 pub const MIN_OTHER_FLAG_AVAILABLE_LEN: comptime_int = 3; // "-e=" or "-d=" before string
 pub const ARGUMENT_BEHAVIOUR_LETTER_INDEX: comptime_int = 1; // 'e' - encryption or 'd' - decryption
+pub const WRITE_TO_FILE_WRITER_BUF_SIZE: comptime_int = 1024;
 
 // ===============================================
 // 2. CRYPTOGRAPHIC PARAMETERS
@@ -40,4 +41,3 @@ pub const CIPHER_ADDITIONAL_DATA: []const u8 = "";
 pub const ZENC_SALT_SIZE: comptime_int = 16; // for KDF salt
 pub const ZENC_MAGIC_NUM: u64 = 0x0709131107091311;
 pub const ZENC_ENDIAN_TYPE = std.builtin.Endian.big;
-
