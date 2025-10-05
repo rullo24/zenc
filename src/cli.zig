@@ -79,6 +79,7 @@ pub fn printHelp(p_file_handle: *std.Io.Writer) !void {
     const help_menu: []const u8 = 
     \\ === USAGE ===
     \\ ./zenc [OPTIONS]
+    \\ NOTE: Always captures relative paths from cwd.
     \\ 
     \\ === OPTIONS ===
     \\ -h OR --help -> Prints this help menu
@@ -104,13 +105,11 @@ pub fn validateArgsObj(p_args_obj: *tac.ARGUMENT_STRUCT) !void {
     if ( p_args_obj.opt_dec_file_loc != null and p_args_obj.opt_enc_file_loc != null) {
         return error.PROVIDED_ENC_AND_DEC_FILE;
     }
-    
+
     // check if file to enc or dec file exists
-    {
-        if ( p_args_obj.opt_enc_file_loc != null) std.fs.cwd().access( p_args_obj.opt_enc_file_loc.?, .{}) catch return error.ENC_FILE_LOC_NOT_REAL
-        else if ( p_args_obj.opt_dec_file_loc != null) std.fs.cwd().access( p_args_obj.opt_dec_file_loc.?, .{}) catch return error.DEC_FILE_LOC_NOT_REAL
-        else return error.ENC_OR_DEC_FILE_DNE;
-    }
+    if ( p_args_obj.opt_enc_file_loc != null) std.fs.cwd().access( p_args_obj.opt_enc_file_loc.?, .{}) catch return error.ENC_FILE_LOC_NOT_REAL
+    else if ( p_args_obj.opt_dec_file_loc != null) std.fs.cwd().access( p_args_obj.opt_dec_file_loc.?, .{}) catch return error.DEC_FILE_LOC_NOT_REAL
+    else return error.ENC_OR_DEC_FILE_DNE;
 }
 
 /// DESCRIPTION

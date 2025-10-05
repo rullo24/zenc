@@ -34,11 +34,8 @@ pub fn main() !void {
     }
     
     // check for sufficient arguments parsed by user to continue
-    cli.validateArgsObj(&args_obj) catch {
-        try cli.printHelp(io_stdout_writer); // print help menu on faulty argument parse
-        return; // end program after printing help
-    };
-     
+    try cli.validateArgsObj(&args_obj);
+
     // capture password from stdin (user input)
     var b_pass_v1: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
     const s_password_v1: []const u8 = try cli.getPassword(&b_pass_v1, io_stdout_writer);
@@ -76,6 +73,8 @@ pub fn main() !void {
 
         // 1. reconfirm entered password
         var b_pass_v2: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
+        _ = try io_stdout_writer.write("Again "); // text external from getPassword func for modularity (reuse from enc steps)
+        try io_stdout_writer.flush();
         const s_password_v2: []const u8 = try cli.getPassword(&b_pass_v2, io_stdout_writer);
         
         // 2. compare s_password_v1 and s_password_v2 --> throw error if these don't match
@@ -98,6 +97,16 @@ pub fn main() !void {
         // 7. write magic num, then salt, then nonce, then ciphertext, then auth tag to ciphertext buffer
         s_opt_output_data = packaging.packEncryptionDataToOutputBuf(s_output_buf, s_ciphertext_buf, &enc_cipher_obj);
 
+        
+
+
+
+        // TODO: file decrypted straight after encryption --> check auth tag and nonce work
+
+
+
+
+
         // 8. destroying all crypto entries
         cipher.secureDestoryAllArgs( .{&s_password_v1, &s_password_v2, &b_final_key, &enc_cipher_obj} );
 
@@ -107,7 +116,7 @@ pub fn main() !void {
     // IF DECRYPTION
     } else if (args_obj.opt_dec_file_loc != null) { 
 
-        _ = try io_stdout_writer.write("=== DECRYPTION MODE SET ===\n");
+        _ = try io_stdout_writer.write("\n=== DECRYPTION MODE SET ===\n");
         try io_stdout_writer.flush();
 
         // 1. basic file check to see if file can hold all non-ciphertext info
@@ -144,6 +153,11 @@ pub fn main() !void {
         else if (args_obj.opt_dec_file_loc != null) std.fs.path.basename(args_obj.opt_dec_file_loc.?) 
         else return error.ENC_OR_DEC_FILE_DNE;
 
+    // replacing last ".ezenc" --> ".dzenc" if decrypting
+    const s_encdec_basename_wo_last_ezenc: []const u8 = 
+        if (std.mem.eql(u8, std.fs.path.extension(s_encdec_basename), ".ezenc") and args_obj.opt_enc_file_loc == null) std.fs.path.stem(s_encdec_basename)
+        else s_encdec_basename;
+
     // get file directory from path
     const s_opt_encdec_file_dir_loc: ?[]const u8 = 
         if (args_obj.opt_enc_file_loc != null) std.fs.path.dirname(args_obj.opt_enc_file_loc.?) 
@@ -153,8 +167,8 @@ pub fn main() !void {
 
     // creating new basename w/ zenc extension for saved file
     const s_new_basename: []const u8 = 
-        if (args_obj.opt_enc_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.ezenc", .{s_encdec_basename})
-        else if (args_obj.opt_dec_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.dzenc", .{s_encdec_basename})
+        if (args_obj.opt_enc_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.ezenc", .{s_encdec_basename_wo_last_ezenc})
+        else if (args_obj.opt_dec_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.dzenc", .{s_encdec_basename_wo_last_ezenc})
         else return error.ENC_OR_DEC_FILE_DNE;
     defer alloc.free(s_new_basename);
 
@@ -170,20 +184,20 @@ pub fn main() !void {
         const p_out_file: std.fs.File = try std.fs.cwd().createFile(s_new_save_loc, .{}); // overwrites prev file if exists 
         defer p_out_file.close(); // close after local scope finishes
 
-        // writing to file
+        // writing to output file using Io.Writer
         var b_file_out_write: [tac.WRITE_TO_FILE_WRITER_BUF_SIZE]u8 = undefined;
         var fs_file_out_writer: std.fs.File.Writer = p_out_file.writer(&b_file_out_write);
         var io_file_out_writer: *std.Io.Writer = &fs_file_out_writer.interface;
         try io_file_out_writer.writeAll(s_output_data); // b_file_out_write buf flushed WHEN FULL ONLY
         try io_file_out_writer.flush(); // ensure all, final data is moved to the file (REQUIRED)
+
     } else return error.NO_OUTPUT_DATA_TO_WRITE_TO_NEW_FILE;
 
 
 
-    // TODO: file decrypted straight after encryption --> check auth tag and nonce work
-
-    // TODO: split main function portions out into sub functions
-
     // TODO: testing, testing, testing for EVERYTHING
+
+
+    // FIXME: multiple encryptions and then decryptions doesn't get back to original data
 
 }
