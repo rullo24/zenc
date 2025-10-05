@@ -52,11 +52,9 @@ pub fn main() !void {
 
     // read file contents into buffer (heaped)
     const file_size: u64 = try p_in_file.getEndPos();
-    const raw_buf: []u8 = try alloc.alloc(u8, file_size); // heap buffer to store file bytes
-    defer alloc.free(raw_buf); // free copied file bytes on program exit
-    _ = try p_in_file.read(raw_buf); // reading unencrypted file data into raw buf
-
-    // FIXME: s_ciphertext_buf size will be as large as file_size in decrypt (not same size as when enc happens due to added baggage)
+    const s_raw_buf: []u8 = try alloc.alloc(u8, file_size); // heap buffer to store file bytes
+    defer alloc.free(s_raw_buf); // free copied file bytes on program exit
+    _ = try p_in_file.read(s_raw_buf); // reading unencrypted file data into raw buf
 
     // building buf for cipher text (encrypted)
     const s_ciphertext_buf: []u8 = try alloc.alloc(u8, file_size); // to be parsed to encrypt method for capturing contents
@@ -95,7 +93,7 @@ pub fn main() !void {
         try cipher.deriveKeyFromPass(s_password_v1, &enc_cipher_obj.salt, &b_final_key); // moving crypto key into `b_final_key`
 
         // 6. encrypt raw contents into ciphertext buffer
-        try cipher.encrypt(&b_final_key, raw_buf, s_ciphertext_buf, &enc_cipher_obj);
+        try cipher.encrypt(&b_final_key, s_raw_buf, s_ciphertext_buf, &enc_cipher_obj);
 
         // 7. write magic num, then salt, then nonce, then ciphertext, then auth tag to ciphertext buffer
         s_opt_output_data = packaging.packEncryptionDataToOutputBuf(s_output_buf, s_ciphertext_buf, &enc_cipher_obj);
@@ -116,7 +114,7 @@ pub fn main() !void {
         if (file_size < (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL_FOR_ZENC_FILE; 
 
         // 2. extract magic num, salt, nonce, encrypted text and auth tag from file
-        const retrieved_components: packaging.CIPHER_COMPONENTS = try packaging.packDecryptionDataToOutputBuf(raw_buf);
+        const retrieved_components: packaging.CIPHER_COMPONENTS = try packaging.packDecryptionDataToOutputBuf(s_raw_buf);
  
         // 3. generate crypto key using extracted salt
         var b_final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
@@ -186,10 +184,5 @@ pub fn main() !void {
     // TODO: split main function portions out into sub functions
 
     // TODO: testing, testing, testing for EVERYTHING
-    
-    // TODO: generate output file name (extension changing)
-    
-    // TODO: save data to new file
-
 
 }
