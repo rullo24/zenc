@@ -174,7 +174,8 @@ pub fn main() !void {
         var b_file_out_write: [tac.WRITE_TO_FILE_WRITER_BUF_SIZE]u8 = undefined;
         var fs_file_out_writer: std.fs.File.Writer = p_out_file.writer(&b_file_out_write);
         var io_file_out_writer: *std.Io.Writer = &fs_file_out_writer.interface;
-        try io_file_out_writer.writeAll(s_output_data); // write all buffer info from cipher buffer + other parts to output buffer
+        try io_file_out_writer.writeAll(s_output_data); // b_file_out_write buf flushed WHEN FULL ONLY
+        try io_file_out_writer.flush(); // ensure all, final data is moved to the file (REQUIRED)
     } else return error.NO_OUTPUT_DATA_TO_WRITE_TO_NEW_FILE;
 
 
