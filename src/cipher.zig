@@ -41,10 +41,10 @@ pub fn encrypt(p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext: []const u8, cipherte
     // run std lib encryption method --> generates auth tag and ciphertext for writing to file w/ nonce
     std.crypto.aead.aes_gcm.Aes256Gcm.encrypt(
         ciphertext_buf, // c: output buffer for encrypted results
-        &p_cipher_obj.auth_tag, // tag: auth tag
+        &p_cipher_obj.b_auth_tag, // tag: auth tag
         plaintext, // m: plaintext buf input from file
         tac.CIPHER_ADDITIONAL_DATA, // ad: additional data
-        p_cipher_obj.nonce, // npub: input nonce
+        p_cipher_obj.b_nonce, // npub: input nonce
         p_key.*, // key: input cipher key (from password)
     );
 }
@@ -62,15 +62,15 @@ pub fn decrypt(plaintext_buf: []u8, p_retrieved: *packaging.CIPHER_COMPONENTS, p
     if (p_retrieved.s_opt_payload == null) return error.NULL_DECRYPTION_PAYLOAD;
     
     // check that the output buffer is capable of receiving data
-    if (plaintext_buf.len >= p_retrieved.s_opt_payload.?.len) return error.PLAINTEXT_BUF_TOO_SMALL_FOR_ENC;
+    if (plaintext_buf.len > p_retrieved.s_opt_payload.?.len) return error.PLAINTEXT_BUF_TOO_SMALL_FOR_ENC;
 
     // run std lib decrypt method --> takes in auth tag and ciphertext which was saved in file
     try std.crypto.aead.aes_gcm.Aes256Gcm.decrypt(
         plaintext_buf, // m: output buf for decrypted plaintext
         p_retrieved.s_opt_payload.?, // c: input buf (to decrypt)
-        p_retrieved.auth_tag, // tag: input auth tag
+        p_retrieved.b_auth_tag, // tag: input auth tag
         tac.CIPHER_ADDITIONAL_DATA, // ad: additional data
-        p_retrieved.nonce, // npub: input nonce
+        p_retrieved.b_nonce, // npub: input nonce
         p_key.*, // key: input cipher key (from password)
     );
 

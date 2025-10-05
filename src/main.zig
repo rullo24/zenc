@@ -85,12 +85,12 @@ pub fn main() !void {
         var enc_cipher_obj: packaging.CIPHER_COMPONENTS = .{}; // holds nonce, salt and auth tag
 
         // 4. generating nonce to "jumble encryption"
-        std.crypto.random.bytes(&enc_cipher_obj.nonce); // reading random bytes into the nonce buffer
+        std.crypto.random.bytes(&enc_cipher_obj.b_nonce); // reading random bytes into the nonce buffer
 
         // 5. generate crypto key from password and salt
         var b_final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
-        std.crypto.random.bytes(&enc_cipher_obj.salt); // scramble entire salt buffer for maximised-randomness crypto algo
-        try cipher.deriveKeyFromPass(s_password_v1, &enc_cipher_obj.salt, &b_final_key); // moving crypto key into `b_final_key`
+        std.crypto.random.bytes(&enc_cipher_obj.b_salt); // scramble entire salt buffer for maximised-randomness crypto algo
+        try cipher.deriveKeyFromPass(s_password_v1, &enc_cipher_obj.b_salt, &b_final_key); // moving crypto key into `b_final_key`
 
         // 6. encrypt raw contents into ciphertext buffer
         try cipher.encrypt(&b_final_key, s_raw_buf, s_ciphertext_buf, &enc_cipher_obj);
@@ -118,7 +118,7 @@ pub fn main() !void {
  
         // 3. generate crypto key using extracted salt
         var b_final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
-        try cipher.deriveKeyFromPass(s_password_v1, &retrieved_components.salt, &b_final_key);
+        try cipher.deriveKeyFromPass(s_password_v1, &retrieved_components.b_salt, &b_final_key);
 
         // 4. define bounds of ciphertext buf for decrypted data placement
         if (retrieved_components.s_opt_payload == null) return error.NULL_DECRYPTION_PAYLOAD;
