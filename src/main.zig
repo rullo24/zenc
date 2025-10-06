@@ -98,6 +98,11 @@ pub fn main() !void {
         s_opt_output_data = packaging.packEncryptionDataToOutputBuf(s_output_buf, s_ciphertext_buf, &enc_cipher_obj);
 
         // -- START SELF TEST ENCRYPTED DATA -- //
+
+
+        // TODO: update this so that it pulls from the s_opt_output_data rather than the pre-defined values
+
+
         if (args_obj.should_check_enc_data == true) {
             const s_test_dec_buf: []u8 = try alloc.alloc(u8, file_size);
             defer alloc.free(s_test_dec_buf);

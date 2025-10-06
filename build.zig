@@ -20,7 +20,8 @@ pub fn build(b: *std.Build) !void {
             .strip = false,
             .optimize = def_optimise,
             .target = def_target,
-        })
+        }),
+        .use_llvm = true,
     });
     b.installArtifact(exe); // creating binary on system
 
