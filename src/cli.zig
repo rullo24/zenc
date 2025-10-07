@@ -317,10 +317,79 @@ test "parseArgs - parse all" {
 
 // -- END parseArgs -- //
 
+// -- START validateArgsObj -- //
 
+test "validateArgsObj - both null" {
 
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{}; // init all to null
 
+    // run testing on data
+    const resp = validateArgsObj(&args_obj);
+    try testing.expectError(error.NO_ENC_OR_DEC_FILE, resp);
 
+}
+
+test "validateArgsObj - both NOT null but invalid" {
+
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{}; // init all to null
+    @memcpy(args_obj.enc_buf[0..3], "abc");
+    args_obj.opt_enc_file_loc = args_obj.enc_buf[0..3];
+    @memcpy(args_obj.dec_buf[0..3], "abc");
+    args_obj.opt_dec_file_loc = args_obj.dec_buf[0..3];
+
+    // run testing on data
+    const resp = validateArgsObj(&args_obj);
+    try testing.expectError(error.PROVIDED_ENC_AND_DEC_FILE, resp);
+
+}
+
+test "validateArgsObj - invalid path on enc (no dec)" {
+
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{}; // init all to null
+    @memcpy(args_obj.enc_buf[0..3], "abc");
+    args_obj.opt_enc_file_loc = args_obj.enc_buf[0..3];
+
+    // run testing on data
+    const resp = validateArgsObj(&args_obj);
+    try testing.expectError(error.ENC_FILE_LOC_NOT_REAL, resp);
+
+}
+
+test "validateArgsObj - invalid path on dec (no enc)" {
+
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{}; // init all to null
+    @memcpy(args_obj.dec_buf[0..3], "abc");
+    args_obj.opt_dec_file_loc = args_obj.dec_buf[0..3];
+
+    // run testing on data
+    const resp = validateArgsObj(&args_obj);
+    try testing.expectError(error.DEC_FILE_LOC_NOT_REAL, resp);
+
+}
+
+test "validateArgsObj - one valid path" {
+
+    // init vars
+    const alloc: std.mem.Allocator = testing.allocator; // creating allocator for file movement
+    var args_obj: tac.ARGUMENT_STRUCT = .{}; // init all to null
+    var tmp_dir: std.testing.TmpDir = testing.tmpDir(.{});
+    defer tmp_dir.cleanup();
+    const tmp_dir_loc: []const u8 = try tmp_dir.dir.realpathAlloc(alloc, ".");
+    defer alloc.free(tmp_dir_loc);
+
+    @memcpy(args_obj.dec_buf[0..tmp_dir_loc.len], tmp_dir_loc);
+    args_obj.opt_dec_file_loc = args_obj.dec_buf[0..tmp_dir_loc.len];
+
+    // run testing on data
+    try validateArgsObj(&args_obj);
+
+}
+
+// -- END validateArgsObj -- //
 
 /////////////////////////
 // --- END TESTING --- //
