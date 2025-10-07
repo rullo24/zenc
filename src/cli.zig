@@ -122,22 +122,16 @@ pub fn validateArgsObj(p_args_obj: *tac.ARGUMENT_STRUCT) !void {
 /// Reads a password from the cli without echoing characters to the screen (toggle this option).
 ///
 /// PARAMETERS
-/// `p_pass_v1_buf` - Buffer to hold the captured password
 /// `stdout` - The file pointer to print to the console
-pub fn getPassword(p_pass_buf: *[tac.MAX_PASSWORD_SIZE_BYTES]u8, stdout: *std.Io.Writer) ![]const u8 {
+/// `stdin` - The file pointer to read from the console
+pub fn getPassword(w: *std.Io.Writer, r: *std.Io.Reader) ![]const u8 {
 
-    // creating stdin reader and prompting user for password
-    const f_stdin: std.fs.File = std.fs.File.stdin();
-    defer f_stdin.close();
-    var password_stdin_reader: std.fs.File.Reader = f_stdin.reader(p_pass_buf);
-    const stdin: *std.Io.Reader = &password_stdin_reader.interface;
-    _ = try stdout.writeAll("Enter Password: "); // print to console
-    try stdout.flush();
+    // print to writer (console)
+    _ = try w.writeAll("Enter Password: "); 
+    try w.flush();
 
-    // reading from the user (stdin)
-    const s_password: []const u8 = try stdin.takeDelimiterExclusive('\n'); // read from user in console
-
-    return s_password;
+    // read from user (stdin)
+    return try r.takeDelimiterExclusive('\n');
 }
 
 ///////////////////////////
@@ -425,6 +419,48 @@ test "validateArgsObj - one valid path" {
 }
 
 // -- END validateArgsObj -- //
+
+// -- START getPassword -- //
+
+test "getPassword - capture password from reader & print prompt to writer" {
+
+    // create writer
+    var b_write: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
+    var writer: std.Io.Writer = .fixed(&b_write);
+
+    // create reader
+    var b_read: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
+    const makeshift_read: []const u8 = "abcdefg";
+    const makeshift_read_w_newline: []const u8 = makeshift_read ++ "\n";
+    @memcpy(b_read[0..makeshift_read_w_newline.len], makeshift_read_w_newline);
+    var reader: std.Io.Reader = .fixed(&b_read);
+
+    // capture password from reader feed and compare against expected
+    const resp: []const u8 = try getPassword(&writer, &reader);
+    try testing.expectEqualStrings(makeshift_read, resp);
+
+}
+
+test "getPassword - handle empty password read" {
+
+    // create writer
+    var b_write: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
+    var writer: std.Io.Writer = .fixed(&b_write);
+
+    // create reader
+    var b_read: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
+    const makeshift_read: []const u8 = "";
+    const makeshift_read_w_newline: []const u8 = makeshift_read ++ "\n";
+    @memcpy(b_read[0..makeshift_read_w_newline.len], makeshift_read_w_newline);
+    var reader: std.Io.Reader = .fixed(&b_read);
+
+    // capture password from reader feed and compare against expected
+    const resp: []const u8 = try getPassword(&writer, &reader);
+    try testing.expectEqualStrings(makeshift_read, resp);
+
+}
+
+// -- END getPassword -- //
 
 /////////////////////////
 // --- END TESTING --- //

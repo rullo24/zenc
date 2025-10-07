@@ -23,6 +23,10 @@ pub fn main() !void {
     var fs_stdout_writer: std.fs.File.Writer = f_stdout.writer(&.{});
     const io_stdout_writer: *std.Io.Writer = &fs_stdout_writer.interface; 
 
+    // creating stdin reader and prompting user for password
+    const f_stdin: std.fs.File = std.fs.File.stdin();
+    defer f_stdin.close();
+
     // capture args from user --> move args into zenc variables
     var args_obj: tac.ARGUMENT_STRUCT = tac.ARGUMENT_STRUCT{}; // to store arguments in easy-to-read format
     const args: []const [:0]u8 = try std.process.argsAlloc(alloc); // capturing args from console
@@ -40,7 +44,9 @@ pub fn main() !void {
 
     // capture password from stdin (user input)
     var b_pass_v1: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
-    const s_password_v1: []const u8 = try cli.getPassword(&b_pass_v1, io_stdout_writer);
+    var pass1_stdin_reader: std.fs.File.Reader = f_stdin.reader(&b_pass_v1);
+    const pass1_stdin_interface: *std.Io.Reader = &pass1_stdin_reader.interface;
+    const s_password_v1: []const u8 = try cli.getPassword(io_stdout_writer, pass1_stdin_interface);
 
     // capture file object from available item
     const p_in_file: std.fs.File = 
@@ -77,7 +83,9 @@ pub fn main() !void {
         var b_pass_v2: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
         _ = try io_stdout_writer.write("Again "); // text external from getPassword func for modularity (reuse from enc steps)
         try io_stdout_writer.flush();
-        const s_password_v2: []const u8 = try cli.getPassword(&b_pass_v2, io_stdout_writer);
+        var pass2_stdin_reader: std.fs.File.Reader = f_stdin.reader(&b_pass_v2);
+        const pass2_stdin_interface: *std.Io.Reader = &pass2_stdin_reader.interface;
+        const s_password_v2: []const u8 = try cli.getPassword(io_stdout_writer, pass2_stdin_interface);
         
         // 2. compare s_password_v1 and s_password_v2 --> throw error if these don't match
         if (std.mem.eql(u8, s_password_v1, s_password_v2) != true) return error.PASSWORDS_DO_NOT_MATCH;
