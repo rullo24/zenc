@@ -1,5 +1,6 @@
 const std: type = @import("std");
 const tac: type = @import("types_and_constants.zig");
+const testing: type = std.testing;
 
 ////////////////////////////////////
 /// PUBLIC FUNCTION DECLARATIONS ///
@@ -137,12 +138,65 @@ pub fn getPassword(p_pass_buf: *[tac.MAX_PASSWORD_SIZE_BYTES]u8, stdout: *std.Io
     return s_password;
 }
 
-/// DESCRIPTION
-/// Clear the terminal history of the PC
-///
-/// PARAMETERS
-/// TBD
-// TODO: Add parameters to comment
-pub fn cleanTerminalHistory() !void {
-    // TODO: implement this
+///////////////////////////
+// --- BEGIN TESTING --- //
+///////////////////////////
+
+// -- START parseArgs -- //
+
+test "parseArgs - parse nothing" {
+
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{};
+    const test_args: [1][:0]const u8 = .{ "./example_program", };
+
+    // run w/ no args
+    try parseArgs(&args_obj, test_args);
+
+    // checking that nothing was grabbed into args_obj (defaults)
+    try testing.expect(args_obj.has_help == false);
+    try testing.expect(args_obj.should_check_enc_data == true);
+    try testing.expect(args_obj.opt_enc_file_loc == null);
+    try testing.expect(args_obj.opt_dec_file_loc == null);
 }
+
+test "parseArgs - parse just --dont_check_enc" {
+
+}
+
+test "parseArgs - parse just enc w/ no file" {
+
+}
+
+test "parseArgs - parse just enc file" {
+
+}
+
+test "parseArgs - parse just dec w/ no file" {
+
+}
+
+test "parseArgs - parse just dec file" {
+
+}
+
+test "parseArgs - parse invalid letter through -<letter>= syntax" {
+
+}
+
+test "parseArgs - parse all" {
+
+}
+
+// -- END parseArgs -- //
+
+
+
+
+
+
+/////////////////////////
+// --- END TESTING --- //
+/////////////////////////
+
+
