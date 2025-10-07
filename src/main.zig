@@ -18,7 +18,9 @@ pub fn main() !void {
     defer _ = gpa.deinit();
 
     // using io_stdout_writer for writing
-    var fs_stdout_writer: std.fs.File.Writer = std.fs.File.stdout().writer(&.{});
+    const f_stdout: std.fs.File = std.fs.File.stdout();
+    defer f_stdout.close();
+    var fs_stdout_writer: std.fs.File.Writer = f_stdout.writer(&.{});
     const io_stdout_writer: *std.Io.Writer = &fs_stdout_writer.interface; 
 
     // capture args from user --> move args into zenc variables

@@ -127,7 +127,9 @@ pub fn validateArgsObj(p_args_obj: *tac.ARGUMENT_STRUCT) !void {
 pub fn getPassword(p_pass_buf: *[tac.MAX_PASSWORD_SIZE_BYTES]u8, stdout: *std.Io.Writer) ![]const u8 {
 
     // creating stdin reader and prompting user for password
-    var password_stdin_reader: std.fs.File.Reader = std.fs.File.stdin().reader(p_pass_buf);
+    const f_stdin: std.fs.File = std.fs.File.stdin();
+    defer f_stdin.close();
+    var password_stdin_reader: std.fs.File.Reader = f_stdin.reader(p_pass_buf);
     const stdin: *std.Io.Reader = &password_stdin_reader.interface;
     _ = try stdout.writeAll("Enter Password: "); // print to console
     try stdout.flush();
@@ -316,6 +318,39 @@ test "parseArgs - parse all" {
 }
 
 // -- END parseArgs -- //
+
+// -- START printHelp -- //
+
+test "printHelp - general print" {
+
+    // taken from printHelp
+    const help_menu: []const u8 = 
+    \\ === USAGE ===
+    \\ ./zenc [OPTIONS]
+    \\ NOTE: Always captures relative paths from cwd.
+    \\ 
+    \\ === OPTIONS ===
+    \\ -h OR --help -> Prints this help menu
+    \\ -e=<file_to_encrypt> -> Encrypt file
+    \\ -d=<file_to_decrypt> -> Decrypt file
+    \\ --dont_check_enc -> Stop immediate encrypted file decryption check (increase speed).
+    ;
+
+    // creating buffer w/ std.Io.Writer to mimic stdout
+    var buf: [help_menu.len]u8 = std.mem.zeroes([help_menu.len]u8);
+    try testing.expectStringStartsWith(&buf, "\x00");
+    try testing.expectStringEndsWith(&buf, "\x00");
+    var b_writer: std.Io.Writer = .fixed(&buf);
+
+    // check if any data is printed to stdout
+    try printHelp(&b_writer);
+    const zero_term_output: [*:0]u8 = @ptrCast(&buf);
+    const true_output: []const u8 = std.mem.span(zero_term_output);
+    try testing.expectEqualStrings(help_menu, true_output);
+
+}
+
+// -- END printHelp -- //
 
 // -- START validateArgsObj -- //
 
