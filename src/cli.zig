@@ -47,7 +47,7 @@ pub fn parseArgs(p_arg_struct: *tac.ARGUMENT_STRUCT, args: []const [:0]u8) !void
                 if (file_string_parsed.len > p_arg_struct.enc_buf.len) return error.FILE_STRING_TOO_LARGE;
                 
                 // copy file string into encryption buffer in struct
-                std.mem.copyForwards(u8, &p_arg_struct.enc_buf, file_string_parsed); // copy into buffer
+                @memcpy(p_arg_struct.enc_buf[0..file_string_parsed.len], file_string_parsed); // copy into buffer
 
                 // set slice in struct to resemble valid part of buffer
                 p_arg_struct.opt_enc_file_loc = p_arg_struct.enc_buf[0..file_string_parsed.len]; // update struct slice to reflect new buffer addition
@@ -59,7 +59,7 @@ pub fn parseArgs(p_arg_struct: *tac.ARGUMENT_STRUCT, args: []const [:0]u8) !void
                 if (file_string_parsed.len > p_arg_struct.dec_buf.len) return error.FILE_STRING_TOO_LARGE;
 
                 // copy file string into encryption buffer in struct
-                std.mem.copyForwards(u8, &p_arg_struct.dec_buf, file_string_parsed); // copy into buffer
+                @memcpy(p_arg_struct.dec_buf[0..file_string_parsed.len], file_string_parsed); // copy into buffer
 
                 // set slice in struct to resemble valid part of buffer
                 p_arg_struct.opt_dec_file_loc = p_arg_struct.dec_buf[0..file_string_parsed.len]; // update struct slice to reflect new buffer addition
@@ -148,43 +148,170 @@ test "parseArgs - parse nothing" {
 
     // init vars
     var args_obj: tac.ARGUMENT_STRUCT = .{};
-    const test_args: [1][:0]const u8 = .{ "./example_program", };
+    const test_args: []const [:0]u8 = &.{ @constCast("./example_program"), };
 
     // run w/ no args
-    try parseArgs(&args_obj, test_args);
-
-    // checking that nothing was grabbed into args_obj (defaults)
+    try parseArgs(&args_obj, test_args );
     try testing.expect(args_obj.has_help == false);
     try testing.expect(args_obj.should_check_enc_data == true);
     try testing.expect(args_obj.opt_enc_file_loc == null);
     try testing.expect(args_obj.opt_dec_file_loc == null);
 }
 
+test "parseArgs - both help versions" {
+
+    // init vars
+    var args_obj_h: tac.ARGUMENT_STRUCT = .{};
+    const test_args_h: []const [:0]u8 = &.{ @constCast("./example_program"), @constCast("-h")};
+    var args_obj_help: tac.ARGUMENT_STRUCT = .{};
+    const test_args_help: []const [:0]u8 = &.{ @constCast("./example_program"), @constCast("--help")};
+
+    // -h
+    try parseArgs(&args_obj_h, test_args_h);
+    try testing.expect(args_obj_h.has_help == true);
+    try testing.expect(args_obj_h.should_check_enc_data == true);
+    try testing.expect(args_obj_h.opt_enc_file_loc == null);
+    try testing.expect(args_obj_h.opt_dec_file_loc == null);
+
+    // --help
+    try parseArgs(&args_obj_help, test_args_help);
+    try testing.expect(args_obj_help.has_help == true);
+    try testing.expect(args_obj_help.should_check_enc_data == true);
+    try testing.expect(args_obj_help.opt_enc_file_loc == null);
+    try testing.expect(args_obj_help.opt_dec_file_loc == null);
+
+}
+
 test "parseArgs - parse just --dont_check_enc" {
+
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{};
+    const test_args: []const [:0]u8 = &.{ @constCast("./example_program"), @constCast("--dont_check_enc")};
+
+    // run w/ --dont_check_enc arg ONLY
+    try parseArgs(&args_obj, test_args);
+    try testing.expect(args_obj.has_help == false);
+    try testing.expect(args_obj.should_check_enc_data == false);
+    try testing.expect(args_obj.opt_enc_file_loc == null);
+    try testing.expect(args_obj.opt_dec_file_loc == null);
 
 }
 
 test "parseArgs - parse just enc w/ no file" {
 
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{};
+    const test_args: []const [:0]u8 = &.{ @constCast("./example_program"), @constCast("-e=")};
+
+    // run w/ enc file (no file string) arg ONLY
+    try parseArgs(&args_obj, test_args);
+    try testing.expect(args_obj.has_help == false);
+    try testing.expect(args_obj.should_check_enc_data == true);
+    try testing.expect(args_obj.opt_enc_file_loc == null); // should not change
+    try testing.expect(args_obj.opt_dec_file_loc == null);
+
 }
 
 test "parseArgs - parse just enc file" {
+
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{};
+    const test_args: []const [:0]u8 = &.{ @constCast("./example_program"), @constCast("-e=jeff")};
+
+    // run w/ enc file arg ONLY
+    try parseArgs(&args_obj, test_args);
+    try testing.expect(args_obj.has_help == false);
+    try testing.expect(args_obj.should_check_enc_data == true);
+    if (args_obj.opt_enc_file_loc) |enc_file_loc| {
+        try testing.expectEqualStrings(enc_file_loc, "jeff");
+    } else return error.OPT_ENC_FILE_LOC_IS_STILL_NULL;
+    try testing.expect(args_obj.opt_dec_file_loc == null);
 
 }
 
 test "parseArgs - parse just dec w/ no file" {
 
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{};
+    const test_args: []const [:0]u8 = &.{ @constCast("./example_program"), @constCast("-d=")};
+
+    // run w/ dec file arg ONLY
+    try parseArgs(&args_obj, test_args);
+    try testing.expect(args_obj.has_help == false);
+    try testing.expect(args_obj.should_check_enc_data == true);
+    try testing.expect(args_obj.opt_enc_file_loc == null);
+    try testing.expect(args_obj.opt_dec_file_loc == null); // should not change
+
 }
 
 test "parseArgs - parse just dec file" {
 
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{};
+    const test_args: []const [:0]u8 = &.{ @constCast("./example_program"), @constCast("-d=jeff")};
+
+    // run w/ dec file arg ONLY
+    try parseArgs(&args_obj, test_args);
+    try testing.expect(args_obj.has_help == false);
+    try testing.expect(args_obj.should_check_enc_data == true);
+    try testing.expect(args_obj.opt_enc_file_loc == null);
+    try testing.expect(args_obj.opt_dec_file_loc != null);
+    try testing.expectEqualStrings(args_obj.opt_dec_file_loc.?, "jeff");
+
 }
 
-test "parseArgs - parse invalid letter through -<letter>= syntax" {
+test "parseArgs - parse invalid letter through -<letter>= syntax NO filepath" {
+
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{};
+    const test_args: []const [:0]u8 = &.{ @constCast("./example_program"), @constCast("-x=")};
+
+    // run w/ bad syntax
+    try parseArgs(&args_obj, test_args); // ignore -x=
+    try testing.expect(args_obj.has_help == false);
+    try testing.expect(args_obj.should_check_enc_data == true);
+    try testing.expect(args_obj.opt_enc_file_loc == null);
+    try testing.expect(args_obj.opt_dec_file_loc == null);
+
+}
+
+test "parseArgs - parse invalid letter through -<letter>= syntax w/ filepath" {
+
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{};
+    const test_args: []const [:0]u8 = &.{ @constCast("./example_program"), @constCast("-x=jeff")};
+
+    // run w/ bad syntax
+    const parse_args_res = parseArgs(&args_obj, test_args);
+    try testing.expectError(error.INVALID_BEHAVIOUR_LETTER, parse_args_res);
+    try testing.expect(args_obj.has_help == false);
+    try testing.expect(args_obj.should_check_enc_data == true);
+    try testing.expect(args_obj.opt_enc_file_loc == null);
+    try testing.expect(args_obj.opt_dec_file_loc == null);
 
 }
 
 test "parseArgs - parse all" {
+
+    // init vars
+    var args_obj: tac.ARGUMENT_STRUCT = .{};
+    const test_args: []const [:0]u8 = &.{ 
+        @constCast("./example_program"), 
+        @constCast("-e=jeff"), 
+        @constCast("-d=jeff"),
+        @constCast("-h"),
+        @constCast("--help"),
+        @constCast("--dont_check_enc")
+    };
+
+    // run w/ all args
+    try parseArgs(&args_obj, test_args);
+    try testing.expect(args_obj.has_help == true);
+    try testing.expect(args_obj.should_check_enc_data == false);
+    try testing.expect(args_obj.opt_enc_file_loc != null);
+    try testing.expectEqualStrings(args_obj.opt_enc_file_loc.?, "jeff");
+    try testing.expect(args_obj.opt_dec_file_loc != null);
+    try testing.expectEqualStrings(args_obj.opt_dec_file_loc.?, "jeff");
 
 }
 
