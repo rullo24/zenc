@@ -270,7 +270,33 @@ test "secureDestroyAllArgs - args all CIPHER_COMPONENTS (3x args)" {
 
 test "secureDestroyAllArgs - mix of strings, arrays and CIPHER_COMPONENTS (5x args)" {
 
+    var b_str1: [256]u8 = [_]u8{0xFF} ** 256;
 
+    const s_str2: []u8 = try testing.allocator.alloc(u8, 1024);
+    defer testing.allocator.free(s_str2);
+    @memset(s_str2, 'A');
+
+    var b_str3: [256]u8 = [_]u8{0xFF} ** 256;
+
+    const s_str4: []u8 = try testing.allocator.alloc(u8, 1024);
+    defer testing.allocator.free(s_str4);
+    @memset(s_str4, 'A');
+
+    var cipher5: packaging.CIPHER_COMPONENTS  = .{};
+    cipher5.magic_num = tac.ZENC_MAGIC_NUM;
+    cipher5.b_salt = [_]u8{0x12} ** tac.ZENC_SALT_SIZE;
+    cipher5.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
+    cipher5.b_auth_tag = [_]u8{0xff} ** tac.AUTH_TAG_SIZE;
+    const cipher5_size: usize = @sizeOf(@TypeOf(cipher5));
+    const p_cipher5: [*]u8 = @ptrCast(&cipher5);
+
+    secureDestoryAllArgs( .{ &b_str1, &s_str2, &b_str3, &s_str4, &cipher5 } );
+
+    for (b_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
+    for (s_str2) |c| try testing.expect(c == 0x0); // check all values are zeroed
+    for (b_str3) |c| try testing.expect(c == 0x0); // check all values are zeroed
+    for (s_str4) |c| try testing.expect(c == 0x0); // check all values are zeroed
+    for (p_cipher5[0..cipher5_size]) |c| try testing.expect (c == 0x0);
 
 }
 
