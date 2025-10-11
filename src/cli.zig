@@ -27,6 +27,10 @@ pub fn parseArgs(p_arg_struct: *tac.ARGUMENT_STRUCT, args: []const [:0]u8) !void
 
             p_arg_struct.has_help = true;
 
+        } else if(std.mem.eql(u8, arg_non_sentinel, "-v") or std.mem.eql(u8, arg_non_sentinel, "--verbose")) {
+
+            p_arg_struct.verbose_print = true;
+
         } else if(std.mem.eql(u8, arg_non_sentinel, "--dont_check_enc")) {
 
             p_arg_struct.should_check_enc_data = false;
@@ -91,6 +95,7 @@ pub fn printHelp(p_file_handle: *std.Io.Writer) !void {
     \\ -e=<file_to_encrypt> -> Encrypt file
     \\ -d=<file_to_decrypt> -> Decrypt file
     \\ --dont_check_enc -> Stop immediate encrypted file decryption check (increase speed).
+    \\ -v OR --verbose -> Prints extra stdout information
     ;
 
     try p_file_handle.writeAll(help_menu);
@@ -328,6 +333,7 @@ test "printHelp - general print" {
     \\ -e=<file_to_encrypt> -> Encrypt file
     \\ -d=<file_to_decrypt> -> Decrypt file
     \\ --dont_check_enc -> Stop immediate encrypted file decryption check (increase speed).
+    \\ -v OR --verbose -> Prints extra stdout information
     ;
 
     // creating buffer w/ std.Io.Writer to mimic stdout

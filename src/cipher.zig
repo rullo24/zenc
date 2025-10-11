@@ -162,6 +162,11 @@ pub fn secureDestoryAllArgs(args: anytype) void {
 // -- END derive, encrypt and decrypt -- //
 
 // -- START secureDestroyAllArgs -- //
+test "secureDestroyAllArgs - zero-sized array" {
+    var b_empty: [0]u8 = [_]u8{'A'} ** 0;
+    secureDestoryAllArgs( .{&b_empty} );
+
+}
 
 test "secureDestroyAllArgs - empty args" {
 
