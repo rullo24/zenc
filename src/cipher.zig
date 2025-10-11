@@ -91,7 +91,8 @@ pub fn secureDestoryAllArgs(args: anytype) void {
         const parsed_arg_type: type = @TypeOf(p_argument);
         const parsed_arg_type_info = @typeInfo(parsed_arg_type);
 
-        // std.debug.print("{any}\n", .{@typeInfo(parsed_arg_type)});
+        // skipping raw slice parses
+        if ( parsed_arg_type_info.pointer.size == .slice ) @compileError("ERROR: Raw slice parsed to secureDestoryAllArgs");
 
         // switch the way to zero based on its type
         switch (parsed_arg_type_info) {
@@ -120,22 +121,22 @@ pub fn secureDestoryAllArgs(args: anytype) void {
                     },
 
                     else => {
-
-                        // NOTE: all other switch cases are working (just slices are throwing panic)
                         
                         if (@typeInfo(@TypeOf(p_argument.*)).pointer.size == .slice) { // ptr to slice provided
-
-                            if (p_argument.*.len == 0) continue; // pass zero sized arrays
-                            const s_deref = p_argument.*;
-                            std.crypto.secureZero(u8, @ptrCast(@constCast(s_deref[0..s_deref.len])) );
                             
+                            // avoiding compiler static memory ([]const u8's)
+                            if (@typeInfo(@TypeOf(p_argument.*)).pointer.is_const == false) {
+
+                                // pass zero sized arrays
+                                if (p_argument.*.len != 0) {
+                                    std.crypto.secureZero(u8, @ptrCast(@constCast(p_argument.*[0..p_argument.*.len])) );
+                                }
+
+                            } else @compileError("ERROR: parsed []const <type>. Cannot change underlying slice values.");
+
                         } else {
                             @compileError("ERROR: unsupported type provided to secureDestoryAllArgs");
                         }
-
-                        std.debug.print("{any}\n", .{ @typeInfo(@TypeOf(p_argument.*)) });
-                        std.debug.print("{s}\n", .{ @typeName(parsed_arg_type_info.pointer.child) } );
-
                     },
                 }
             }, 
@@ -191,14 +192,30 @@ test "secureDestroyAllArgs - args all arrays (3x args)" {
 
 test "secureDestroyAllArgs - args all strings (1x args)" {
     
-    const s_str1: []const u8 = "abcdef";
+    const s_str1: []u8 = try testing.allocator.alloc(u8, 1024);
+    defer testing.allocator.free(s_str1);
+    @memset(s_str1, 'A');
     secureDestoryAllArgs( .{ &s_str1 } );
     for (s_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
+    
 }
 
 test "secureDestroyAllArgs - args all strings (3x args)" {
 
-
+    const s_str1: []u8 = try testing.allocator.alloc(u8, 256);
+    defer testing.allocator.free(s_str1);
+    @memset(s_str1, 'C');
+    @memcpy(s_str1[0..21], "hey_what_is_your_name");
+    const s_str2: []u8 = try testing.allocator.alloc(u8, 256);
+    defer testing.allocator.free(s_str2);
+    @memset(s_str2, 'F');
+    const s_str3: []u8 = try testing.allocator.alloc(u8, 256);
+    defer testing.allocator.free(s_str3);
+    @memset(s_str3, 'D');
+    secureDestoryAllArgs( .{ &s_str1, &s_str2, &s_str3 } );
+    for (s_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
+    for (s_str2) |c| try testing.expect(c == 0x0); // check all values are zeroed
+    for (s_str3) |c| try testing.expect(c == 0x0); // check all values are zeroed
 
 }
 
