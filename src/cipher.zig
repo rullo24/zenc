@@ -249,6 +249,40 @@ test "encrypt and decrypt - corrupted auth tag failure" {
     
 }
 
+test "encrypt and decrypt - 3x encdec in a row" {
+
+    // 1. Setup Phase: Define Original Plaintext, Password, and Salt.
+    
+    // 2. Key Derivation: Generate a single, consistent Final Key.
+    
+    // 3. Allocate Buffers: Allocate buffers for 3 rounds of plaintext/ciphertext: buf_1, buf_2, buf_3.
+    
+    // --- First Round Trip (Encrypt 1 -> Decrypt 1) ---
+    // 4. Encrypt 1: Call encrypt using Final Key, Original Plaintext, and fresh CIPHER_COMPONENTS (C1).
+    
+    // 5. Decrypt 1: Call decrypt using Final Key and C1.
+    
+    // 6. Assert 1: Assert decrypted result is equal to Original Plaintext.
+    
+    // --- Second Round Trip (Encrypt 2 -> Decrypt 2) ---
+    // 7. Encrypt 2: Call encrypt using Final Key, Decrypted Data from step 6, and a fresh CIPHER_COMPONENTS (C2).
+    
+    // 8. Decrypt 2: Call decrypt using Final Key and C2.
+    
+    // 9. Assert 2: Assert decrypted result is equal to Original Plaintext.
+    
+    // --- Third Round Trip (Encrypt 3 -> Decrypt 3) --- 
+    // 10. Encrypt 3: Call encrypt using Final Key, Decrypted Data from step 9, and a fresh CIPHER_COMPONENTS (C3).
+    
+    // 11. Decrypt 3: Call decrypt using Final Key and C3.
+    
+    // 12. Assert 3: Assert final decrypted result is equal to Original Plaintext.
+    
+    
+    // 13. Cleanup: Securely destroy the Final Key and all buffers/components.
+    
+}
+
 test "encrypt - output buffer too small error" {
 
     // 1. Setup: Define a plaintext slice of length N.
