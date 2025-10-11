@@ -100,23 +100,41 @@ pub fn secureDestoryAllArgs(args: anytype) void {
                 switch (@typeInfo(parsed_arg_type_info.pointer.child)) {
 
                     .array => {
-                        if (p_argument.*.len == 0) continue; // pass zero sized arrays
 
+                        if (p_argument.*.len == 0) continue; // pass zero sized arrays
                         const i_arr_start: usize = @intFromPtr(p_argument);
                         const p_arr_start: [*]volatile u8 = @ptrFromInt(i_arr_start);
                         const byte_size: usize = @sizeOf(@TypeOf(p_argument.*[0]));
-
                         std.crypto.secureZero(u8, p_arr_start[ 0..(p_argument.*.len*byte_size) ] );
                     },
 
-                    else => {
-
+                    .@"struct" => {
+                        
                         // convert to byte slice
                         const ptr_as_int: usize = @intFromPtr(p_argument);
                         const byte_size: usize = @sizeOf(@TypeOf(p_argument.*));
                         const p_byte_start: [*]u8 = @ptrFromInt(ptr_as_int);
                         const byte_slice: []u8 = p_byte_start[0..byte_size];
                         std.crypto.secureZero(u8, @constCast(@ptrCast(byte_slice)));
+
+                    },
+
+                    else => {
+
+                        // NOTE: all other switch cases are working (just slices are throwing panic)
+                        
+                        if (@typeInfo(@TypeOf(p_argument.*)).pointer.size == .slice) { // ptr to slice provided
+
+                            if (p_argument.*.len == 0) continue; // pass zero sized arrays
+                            const s_deref = p_argument.*;
+                            std.crypto.secureZero(u8, @ptrCast(@constCast(s_deref[0..s_deref.len])) );
+                            
+                        } else {
+                            @compileError("ERROR: unsupported type provided to secureDestoryAllArgs");
+                        }
+
+                        std.debug.print("{any}\n", .{ @typeInfo(@TypeOf(p_argument.*)) });
+                        std.debug.print("{s}\n", .{ @typeName(parsed_arg_type_info.pointer.child) } );
 
                     },
                 }
@@ -172,9 +190,10 @@ test "secureDestroyAllArgs - args all arrays (3x args)" {
 }
 
 test "secureDestroyAllArgs - args all strings (1x args)" {
-
-
-
+    
+    const s_str1: []const u8 = "abcdef";
+    secureDestoryAllArgs( .{ &s_str1 } );
+    for (s_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
 }
 
 test "secureDestroyAllArgs - args all strings (3x args)" {
@@ -183,8 +202,22 @@ test "secureDestroyAllArgs - args all strings (3x args)" {
 
 }
 
-
 test "secureDestroyAllArgs - args all CIPHER_COMPONENTS (1x args)" {
+
+    var cipher1: packaging.CIPHER_COMPONENTS  = .{};
+    cipher1.magic_num = tac.ZENC_MAGIC_NUM;
+    cipher1.b_salt = [_]u8{0x12} ** tac.ZENC_SALT_SIZE;
+    cipher1.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
+    cipher1.b_auth_tag = [_]u8{0xff} ** tac.AUTH_TAG_SIZE;
+    const cipher1_size: usize = @sizeOf(@TypeOf(cipher1));
+
+    secureDestoryAllArgs( .{ &cipher1 } );
+
+    const p_cipher1: [*]u8 = @ptrCast(&cipher1);
+    for (p_cipher1[0..cipher1_size]) |c| try testing.expect (c == 0x0);
+}
+
+test "secureDestroyAllArgs - args all CIPHER_COMPONENTS (3x args)" {
     
     var cipher1: packaging.CIPHER_COMPONENTS  = .{};
     cipher1.magic_num = tac.ZENC_MAGIC_NUM;
@@ -192,17 +225,30 @@ test "secureDestroyAllArgs - args all CIPHER_COMPONENTS (1x args)" {
     cipher1.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
     cipher1.b_auth_tag = [_]u8{0xff} ** tac.AUTH_TAG_SIZE;
     const cipher1_size: usize = @sizeOf(@TypeOf(cipher1));
-    secureDestoryAllArgs( .{ &cipher1 } );
+
+    var cipher2: packaging.CIPHER_COMPONENTS  = .{};
+    cipher2.magic_num = tac.ZENC_MAGIC_NUM;
+    cipher2.b_salt = [_]u8{0x12} ** tac.ZENC_SALT_SIZE;
+    cipher2.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
+    cipher2.b_auth_tag = [_]u8{0xff} ** tac.AUTH_TAG_SIZE;
+    const cipher2_size: usize = @sizeOf(@TypeOf(cipher2));
+
+    var cipher3: packaging.CIPHER_COMPONENTS  = .{};
+    cipher3.magic_num = tac.ZENC_MAGIC_NUM;
+    cipher3.b_salt = [_]u8{0x12} ** tac.ZENC_SALT_SIZE;
+    cipher3.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
+    cipher3.b_auth_tag = [_]u8{0xff} ** tac.AUTH_TAG_SIZE;
+    const cipher3_size: usize = @sizeOf(@TypeOf(cipher3));
+
+    secureDestoryAllArgs( .{ &cipher1, &cipher2, &cipher3 } );
 
     const p_cipher1: [*]u8 = @ptrCast(&cipher1);
     for (p_cipher1[0..cipher1_size]) |c| try testing.expect (c == 0x0);
-    
-}
-
-test "secureDestroyAllArgs - args all CIPHER_COMPONENTS (3x args)" {
-
-
-
+    const p_cipher2: [*]u8 = @ptrCast(&cipher2);
+    for (p_cipher2[0..cipher2_size]) |c| try testing.expect (c == 0x0);
+    const p_cipher3: [*]u8 = @ptrCast(&cipher3);
+    for (p_cipher3[0..cipher3_size]) |c| try testing.expect (c == 0x0);
+ 
 }
 
 test "secureDestroyAllArgs - mix of strings, arrays and CIPHER_COMPONENTS (5x args)" {
