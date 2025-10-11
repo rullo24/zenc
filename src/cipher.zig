@@ -1,10 +1,11 @@
 const std: type = @import("std");
 const tac: type = @import("types_and_constants.zig");
 const packaging: type = @import("packaging.zig");
+const testing: type = std.testing;
 
-////////////////////////////////////
-/// PUBLIC FUNCTION DECLARATIONS ///
-////////////////////////////////////
+//////////////////////////////////////////
+// START - PUBLIC FUNCTION DECLARATIONS //
+//////////////////////////////////////////
 
 /// DESCRIPTION
 /// Responsible for creating a crypto key from a user-entered password.
@@ -86,12 +87,135 @@ pub fn secureDestoryAllArgs(args: anytype) void {
     // inline forces compiler to unravel loop at comptime
     inline for (args) |p_argument| { 
 
-        // 1. for each arg, capture a standardised pointer
-        const p_volatile_mem: [*]volatile u8 = @ptrFromInt(@intFromPtr(p_argument)); // capture all argument types as same type
-        const curr_arg_size: usize = @sizeOf(@TypeOf(p_argument));
+        // get type of parsed argument
+        const parsed_arg_type: type = @TypeOf(p_argument);
+        const parsed_arg_type_info = @typeInfo(parsed_arg_type);
 
-        // 2. create slice from ptr and length and cryptographically delete the memory
-        const s_curr_arg_bytes: []volatile u8 = p_volatile_mem[0..curr_arg_size];
-        std.crypto.secureZero(u8, s_curr_arg_bytes); // zero all memory from current argument
+        // std.debug.print("{any}\n", .{@typeInfo(parsed_arg_type)});
+
+        // switch the way to zero based on its type
+        switch (parsed_arg_type_info) {
+            .pointer => {
+
+                switch (@typeInfo(parsed_arg_type_info.pointer.child)) {
+
+                    .array => {
+                        if (p_argument.*.len == 0) continue; // pass zero sized arrays
+
+                        const i_arr_start: usize = @intFromPtr(p_argument);
+                        const p_arr_start: [*]volatile u8 = @ptrFromInt(i_arr_start);
+                        const byte_size: usize = @sizeOf(@TypeOf(p_argument.*[0]));
+
+                        std.crypto.secureZero(u8, p_arr_start[ 0..(p_argument.*.len*byte_size) ] );
+                    },
+
+                    else => {
+
+                        // convert to byte slice
+                        const ptr_as_int: usize = @intFromPtr(p_argument);
+                        const byte_size: usize = @sizeOf(@TypeOf(p_argument.*));
+                        const p_byte_start: [*]u8 = @ptrFromInt(ptr_as_int);
+                        const byte_slice: []u8 = p_byte_start[0..byte_size];
+                        std.crypto.secureZero(u8, @constCast(@ptrCast(byte_slice)));
+
+                    },
+                }
+            }, 
+
+            else => @compileError("ERROR: type not supported in secureDestroyAllArgs"),
+
+        }
     }
 }
+
+//////////////////////////////////////////////
+// --- END PUBLIC FUNCTION DECLARATIONS --- //
+//////////////////////////////////////////////
+
+///////////////////////////
+// --- START TESTING --- //
+///////////////////////////
+
+// -- START derive, encrypt and decrypt -- //
+
+
+
+// -- END derive, encrypt and decrypt -- //
+
+// -- START secureDestroyAllArgs -- //
+
+test "secureDestroyAllArgs - empty args" {
+
+    secureDestoryAllArgs(.{});
+
+}
+
+test "secureDestroyAllArgs - args all arrays (1x args)" {
+
+    
+    var b_str1: [256]u8 = [_]u8{0xFF} ** 256;
+    secureDestoryAllArgs(.{&b_str1});
+    for (b_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
+
+}
+
+test "secureDestroyAllArgs - args all arrays (3x args)" {
+
+    var b_str1: [256]u8 = undefined;
+    var b_str2: [1024]u8 = [_]u8{0x12} ** 1024;
+    var b_str3: [4096]u8 = [_]u8{0x34} ** 4096;
+    secureDestoryAllArgs( .{ &b_str1, &b_str2, &b_str3 } );
+    for (b_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
+    for (b_str2) |c| try testing.expect(c == 0x0); // check all values are zeroed
+    for (b_str3) |c| try testing.expect(c == 0x0); // check all values are zeroed
+
+}
+
+test "secureDestroyAllArgs - args all strings (1x args)" {
+
+
+
+}
+
+test "secureDestroyAllArgs - args all strings (3x args)" {
+
+
+
+}
+
+
+test "secureDestroyAllArgs - args all CIPHER_COMPONENTS (1x args)" {
+    
+    var cipher1: packaging.CIPHER_COMPONENTS  = .{};
+    cipher1.magic_num = tac.ZENC_MAGIC_NUM;
+    cipher1.b_salt = [_]u8{0x12} ** tac.ZENC_SALT_SIZE;
+    cipher1.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
+    cipher1.b_auth_tag = [_]u8{0xff} ** tac.AUTH_TAG_SIZE;
+    const cipher1_size: usize = @sizeOf(@TypeOf(cipher1));
+    secureDestoryAllArgs( .{ &cipher1 } );
+
+    const p_cipher1: [*]u8 = @ptrCast(&cipher1);
+    for (p_cipher1[0..cipher1_size]) |c| try testing.expect (c == 0x0);
+    
+}
+
+test "secureDestroyAllArgs - args all CIPHER_COMPONENTS (3x args)" {
+
+
+
+}
+
+test "secureDestroyAllArgs - mix of strings, arrays and CIPHER_COMPONENTS (5x args)" {
+
+
+
+}
+
+// -- END secureDestroyAllArgs -- //
+
+/////////////////////////
+// --- END TESTING --- //
+/////////////////////////
+
+
+
