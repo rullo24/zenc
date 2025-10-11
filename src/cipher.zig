@@ -157,7 +157,153 @@ pub fn secureDestoryAllArgs(args: anytype) void {
 
 // -- START derive, encrypt and decrypt -- //
 
+test "deriveKeyFromPass - unique key from different salt" {
 
+    // 1. Setup: Define a single password and two distinct salt buffers (Salt A and Salt B).
+    
+    // 2. Derive Key A: Call deriveKeyFromPass with the password and Salt A.
+    
+    // 3. Derive Key B: Call deriveKeyFromPass with the password and Salt B.
+    
+    // 4. Assert: Expect the resulting Key A and Key B to be different using std.mem.eql.
+
+}
+
+test "deriveKeyFromPass - unique key from different password" {
+
+    // 1. Setup: Define a single salt and two distinct password strings (Pass A and Pass B).
+    
+    // 2. Derive Key A: Call deriveKeyFromPass with Pass A and the salt.
+    
+    // 3. Derive Key B: Call deriveKeyFromPass with Pass B and the salt.
+    
+    // 4. Assert: Expect the resulting Key A and Key B to be different using std.mem.eql.
+
+}
+
+test "deriveKeyFromPass - basic key derivation" {
+    
+    // 1. Define inputs
+    
+    // 2. Call deriveKeyFromPass
+
+    // 3. Assert the output key is non-zero
+
+}
+
+test "encrypt and decrypt - empty plaintext" {
+
+    // 1. Setup: Define an empty plaintext slice ([]const u8{}).
+    
+    // 2. Derive Key: Call deriveKeyFromPass to generate the key.
+    
+    // 3. Encrypt: Call encrypt with the key, empty plaintext, and fresh components.
+    
+    // 4. Decrypt: Call decrypt with the key and the encrypted components.
+    
+    // 5. Assert: Check that the decrypted data is an empty slice and that no errors occurred.
+
+}
+
+test "encrypt and decrypt - round trip (basic)" {
+    
+    // 1. Setup: Define a plaintext message.
+    
+    // 2. Derive Key: Call deriveKeyFromPass to generate the key.
+    
+    // 3. Encrypt: Call encrypt with the key, plaintext, and fresh components.
+    
+    // 4. Decrypt: Call decrypt with the key and the encrypted components.
+    
+    // 5. Assert: Use std.mem.eql(u8, original_plaintext, decrypted_data)
+    
+}
+
+test "encrypt and decrypt - key mismatch failure" {
+    
+    // 1. Setup: Define plaintext.
+    
+    // 2. Derive Key A: Generate a key for encryption.
+    
+    // 3. Derive Key B: Generate a *different* key (e.g., from a different password).
+    
+    // 4. Encrypt: Encrypt with Key A.
+    
+    // 5. Attempt Decrypt: Call decrypt with Key B.
+    
+    // 6. Assert: Expect an error (e.g., error.TagMismatch or a similar decryption error).
+    
+}
+
+test "encrypt and decrypt - corrupted auth tag failure" {
+    
+    // 1. Setup: Define plaintext.
+    
+    // 2. Derive Key & Encrypt: Complete a successful encryption.
+    
+    // 3. Tamper: Modify one byte in the generated auth tag buffer.
+    
+    // 4. Attempt Decrypt: Call decrypt with the corrupted auth tag.
+    
+    // 5. Assert: Expect an error (std.crypto.aead.Error.TagMismatch).
+    
+}
+
+test "encrypt - output buffer too small error" {
+
+    // 1. Setup: Define a plaintext slice of length N.
+    
+    // 2. Setup: Define a ciphertext output buffer of length N-1 (too small).
+    
+    // 3. Derive Key: Generate a valid key.
+    
+    // 4. Attempt Encrypt: Call encrypt, providing the too-small buffer.
+    
+    // 5. Assert: Expect the function to return the error.CIPHERTEXT_BUF_TOO_SMALL_FOR_ENC error.
+
+}
+
+test "decrypt - corrupted ciphertext failure" {
+
+    // 1. Setup: Define a plaintext message.
+    
+    // 2. Derive Key & Encrypt: Complete a successful encryption to get the ciphertext, key, and components.
+    
+    // 3. Tamper: Modify one byte in the generated ciphertext payload buffer.
+    
+    // 4. Attempt Decrypt: Call decrypt with the tampered ciphertext.
+    
+    // 5. Assert: Expect an error, specifically std.crypto.aead.Error.TagMismatch, as the payload no longer matches the Auth Tag.
+
+}
+
+test "decrypt - corrupted additional data failure" {
+
+    // 1. Setup: Define a plaintext message.
+    
+    // 2. Derive Key & Encrypt: Complete a successful encryption (which uses the constant `tac.CIPHER_ADDITIONAL_DATA`).
+    
+    // 3. Tamper: In the test, create a *new* local constant for Additional Data that differs from `tac.CIPHER_ADDITIONAL_DATA`.
+    
+    // 4. Attempt Decrypt: Call `std.crypto.aead.aes_gcm.Aes256Gcm.decrypt` manually (or within a wrapper if needed), passing the original encrypted components but with the *tampered* Additional Data.
+    
+    // 5. Assert: Expect an error, specifically std.crypto.aead.Error.TagMismatch.
+
+}
+
+test "decrypt - null payload error" {
+
+    // 1. Setup: Create a packaging.CIPHER_COMPONENTS struct.
+    
+    // 2. Setup: Ensure the `s_opt_payload` field is explicitly set to `null` (or ensure it's the initial null value).
+    
+    // 3. Derive Key: Generate a valid key (it won't be used, but keeps the flow correct).
+    
+    // 4. Attempt Decrypt: Call decrypt with the struct containing the null payload.
+    
+    // 5. Assert: Expect the function to return the error.NULL_DECRYPTION_PAYLOAD error.
+
+}
 
 // -- END derive, encrypt and decrypt -- //
 
