@@ -24,12 +24,6 @@ pub fn build(b: *std.Build) !void {
     });
     b.installArtifact(root_exe_compiler); // creating binary on system
 
-    // --- CUSTOM RUN STEP FOR DEBUGGING --- ///
-
-
-    // TODO
-
-
     // TESTING //
     const test_build_step: *std.Build.Step = b.step("test", "Run all tests.");
 
@@ -70,5 +64,4 @@ pub fn build(b: *std.Build) !void {
         test_build_step.dependOn(&run_zenc_tests.step); // adding test to fleet of tests
 
     }
-
 }

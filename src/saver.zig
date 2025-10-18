@@ -47,15 +47,7 @@ pub fn saveOutput(
         }
 
     }
-
-    // // creating new basename w/ zenc extension for saved file
-    // const s_new_basename: []const u8 = 
-    //     if (p_args_obj.opt_enc_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.ezenc", .{s_encdec_basename_wo_last_ezenc})
-    //     else if (p_args_obj.opt_dec_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.dzenc", .{s_encdec_basename_wo_last_ezenc})
-    //     else return error.ENC_OR_DEC_FILE_DNE;
-    // defer alloc.free(s_new_basename);
-
-
+    
     // get file directory from path
     const s_opt_encdec_file_dir_loc: ?[]const u8 = 
         if (p_args_obj.opt_enc_file_loc != null) std.fs.path.dirname(p_args_obj.opt_enc_file_loc.?) 
