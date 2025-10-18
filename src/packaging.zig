@@ -57,7 +57,7 @@ pub fn packEncryptionDataToOutputBuf(s_output_buf: []u8, s_ciphertext_buf: []con
 ///
 /// PARAMETERS
 /// s_raw_buf - The input, encrypted, raw data from the captured file to be decrypted
-pub fn packDecryptionDataToOutputBuf(s_raw_buf: []const u8) !CIPHER_COMPONENTS {
+pub fn unpackDecryptionDataFromOutputBuf(s_raw_buf: []const u8) !CIPHER_COMPONENTS {
     var retrieved_components: CIPHER_COMPONENTS = .{};
     var offset: usize = 0;
 

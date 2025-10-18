@@ -201,7 +201,7 @@ pub fn main() !void {
         if (file_size < (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL_FOR_ZENC_FILE; 
 
         // 2. extract magic num, salt, nonce, encrypted text and auth tag from file
-        const retrieved_components: packaging.CIPHER_COMPONENTS = try packaging.packDecryptionDataToOutputBuf(s_raw_buf);
+        const retrieved_components: packaging.CIPHER_COMPONENTS = try packaging.unpackDecryptionDataFromOutputBuf(s_raw_buf);
  
         // 3. generate crypto key using extracted salt
         var b_final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
