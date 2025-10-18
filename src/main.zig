@@ -85,12 +85,8 @@ pub fn main() !void {
         try io_stdout_writer.flush();
     } 
 
-    // building buf for cipher text (encrypted)
-    const s_ciphertext_buf: []u8 = try alloc.alloc(u8, file_size); // to be parsed to encrypt method for capturing contents
-    defer alloc.free(s_ciphertext_buf);
-
     // building buf for output file text (NONCE + ciphertext + AUTH_TAG)
-    const output_size: usize = (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + s_ciphertext_buf.len + tac.AUTH_TAG_SIZE);
+    const output_size: usize = (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + file_size + tac.AUTH_TAG_SIZE);
     const s_output_buf: []u8 = try alloc.alloc(u8, output_size);
     defer alloc.free(s_output_buf);
     var s_opt_output_data: ?[]const u8 = null; // holds slice from s_output_buf that contains the final data
@@ -103,7 +99,11 @@ pub fn main() !void {
 
     // IF ENCRYPTION
     if (args_obj.opt_enc_file_loc != null) {
-        
+
+        // building buf for cipher text (encrypted)
+        const s_ciphertext_buf: []u8 = try alloc.alloc(u8, file_size); // to be parsed to encrypt method for capturing contents
+        defer alloc.free(s_ciphertext_buf);
+
         _ = try io_stdout_writer.write("\n=== ENCRYPTION MODE SET ===\n");
         try io_stdout_writer.flush();
 
@@ -182,7 +182,7 @@ pub fn main() !void {
         // -- END SELF TEST ENCRYPTED DATA -- //
 
         // 9. destroying all crypto entries
-        cipher.secureDestoryAllArgs( .{&b_pass_v1[0..s_password_v1.len], &b_pass_v2[0..s_password_v2.len], &b_final_key, &enc_cipher_obj} );
+        cipher.secureDestoryAllArgs( .{&b_pass_v1[0..s_password_v1.len], &b_pass_v2[0..s_password_v2.len], &b_final_key, &enc_cipher_obj, &s_ciphertext_buf,} );
         if (args_obj.verbose_print) {
             _ = try io_stdout_writer.writeAll("\tSUCCESS: Securely destoryed all encryption arguments\n");
             try io_stdout_writer.flush();
@@ -240,35 +240,59 @@ pub fn main() !void {
     // ensuring that data was written to the output location
     if (s_opt_output_data == null) return error.FAILED_TO_SAVE_CRYPTO_OPERATION_TO_s_output_buf;
 
+    // save cipher processed data to file
+    try saveOutput(alloc, &args_obj, s_opt_output_data, io_stdout_writer);
+
+    // ensure all CONFIDENTIAL buffers are destroyed
+    cipher.secureDestoryAllArgs(.{&s_output_buf, &s_raw_buf}); 
+
+    // FIXME: multiple encryptions and then decryptions doesn't get back to original data
+
+}
+
+/// handles the final file path logic and writes the output buffer to the new file.
+///
+/// PARAMETERS:
+/// - alloc: Allocator used for path string creation.
+/// - p_args_obj: Argument struct with file locations.
+/// - s_opt_output_data: The final data slice to be written to disk.
+/// - io_stdout_writer: Writer for logging output.
+fn saveOutput(
+    alloc: std.mem.Allocator,
+    p_args_obj: *tac.ARGUMENT_STRUCT,
+    s_opt_output_data: ?[]const u8,
+    io_stdout_writer: *std.Io.Writer,
+) !void {
+
     // get basename of parsed file for adding enc or dec extension to
     const s_encdec_basename: []const u8 =
-        if (args_obj.opt_enc_file_loc != null) std.fs.path.basename(args_obj.opt_enc_file_loc.?)
-        else if (args_obj.opt_dec_file_loc != null) std.fs.path.basename(args_obj.opt_dec_file_loc.?) 
+        if (p_args_obj.opt_enc_file_loc != null) std.fs.path.basename(p_args_obj.opt_enc_file_loc.?)
+        else if (p_args_obj.opt_dec_file_loc != null) std.fs.path.basename(p_args_obj.opt_dec_file_loc.?) 
         else return error.ENC_OR_DEC_FILE_DNE;
 
     // replacing last ".ezenc" --> ".dzenc" if decrypting
     const s_encdec_basename_wo_last_ezenc: []const u8 = 
-        if (std.mem.eql(u8, std.fs.path.extension(s_encdec_basename), ".ezenc") and args_obj.opt_enc_file_loc == null) std.fs.path.stem(s_encdec_basename)
+        if (std.mem.eql(u8, std.fs.path.extension(s_encdec_basename), ".ezenc") and p_args_obj.opt_enc_file_loc == null) std.fs.path.stem(s_encdec_basename)
         else s_encdec_basename;
 
     // get file directory from path
     const s_opt_encdec_file_dir_loc: ?[]const u8 = 
-        if (args_obj.opt_enc_file_loc != null) std.fs.path.dirname(args_obj.opt_enc_file_loc.?) 
-        else if (args_obj.opt_dec_file_loc != null) std.fs.path.dirname(args_obj.opt_dec_file_loc.?) 
+        if (p_args_obj.opt_enc_file_loc != null) std.fs.path.dirname(p_args_obj.opt_enc_file_loc.?) 
+        else if (p_args_obj.opt_dec_file_loc != null) std.fs.path.dirname(p_args_obj.opt_dec_file_loc.?) 
         else return error.ENC_OR_DEC_FILE_DNE;
     if (s_opt_encdec_file_dir_loc == null) return error.NULL_FILE_DIRECTORY_CANNOT_SAVE;
 
     // creating new basename w/ zenc extension for saved file
     const s_new_basename: []const u8 = 
-        if (args_obj.opt_enc_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.ezenc", .{s_encdec_basename_wo_last_ezenc})
-        else if (args_obj.opt_dec_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.dzenc", .{s_encdec_basename_wo_last_ezenc})
+        if (p_args_obj.opt_enc_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.ezenc", .{s_encdec_basename_wo_last_ezenc})
+        else if (p_args_obj.opt_dec_file_loc != null) try std.fmt.allocPrint(alloc, "{s}.dzenc", .{s_encdec_basename_wo_last_ezenc})
         else return error.ENC_OR_DEC_FILE_DNE;
     defer alloc.free(s_new_basename);
 
     // capturing new save location from parsed directory and filename
     const s_new_save_loc: []const u8 = 
-        if (args_obj.opt_enc_file_loc != null) try std.fs.path.join(alloc, &[_][]const u8{s_opt_encdec_file_dir_loc.?, s_new_basename})
-        else if (args_obj.opt_dec_file_loc != null) try std.fs.path.join(alloc, &[_][]const u8{s_opt_encdec_file_dir_loc.?, s_new_basename})
+        if (p_args_obj.opt_enc_file_loc != null) try std.fs.path.join(alloc, &[_][]const u8{s_opt_encdec_file_dir_loc.?, s_new_basename})
+        else if (p_args_obj.opt_dec_file_loc != null) try std.fs.path.join(alloc, &[_][]const u8{s_opt_encdec_file_dir_loc.?, s_new_basename})
         else return error.ENC_OR_DEC_FILE_DNE;
     defer alloc.free(s_new_save_loc); // free heaped memory on program close
 
@@ -289,10 +313,5 @@ pub fn main() !void {
     _ = try io_stdout_writer.writeAll(s_new_save_loc);
     _ = try io_stdout_writer.writeAll(")\n");
     try io_stdout_writer.flush();
-
-    // ensure all CONFIDENTIAL buffers are destroyed
-    cipher.secureDestoryAllArgs(.{&s_output_buf, &s_ciphertext_buf, &s_raw_buf}); 
-
-    // FIXME: multiple encryptions and then decryptions doesn't get back to original data
 
 }
