@@ -293,8 +293,6 @@ pub fn main() !void {
     // ensure all CONFIDENTIAL buffers are destroyed
     cipher.secureDestoryAllArgs(.{&s_output_buf, &s_ciphertext_buf, &s_raw_buf}); 
 
-    // TODO: add status messages throughout program, EVERYWHERE
-
     // FIXME: multiple encryptions and then decryptions doesn't get back to original data
 
 }
