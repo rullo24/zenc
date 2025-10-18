@@ -162,8 +162,9 @@ pub fn main() !void {
             defer alloc.free(s_test_dec_buf);
 
             // create component for immediate decryption test
-            var test_dec_components: packaging.CIPHER_COMPONENTS = enc_cipher_obj;
-            test_dec_components.s_opt_payload = s_ciphertext_buf;
+            if (s_opt_output_data == null) return error.NO_OUTPUT_ENC_DATA;
+            var test_dec_components: packaging.CIPHER_COMPONENTS = try packaging.unpackDecryptionDataFromOutputBuf(s_opt_output_data.?);
+            // test_dec_components.s_opt_payload = s_ciphertext_buf;
             
             // decrypt data that was just encrypted
             const s_test_dec_data: []const u8 = try cipher.decrypt(
