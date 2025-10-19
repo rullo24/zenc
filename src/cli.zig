@@ -31,6 +31,10 @@ pub fn parseArgs(p_arg_struct: *tac.ARGUMENT_STRUCT, args: []const [:0]u8) !void
 
             p_arg_struct.verbose_print = true;
 
+        } else if (std.mem.eql(u8, arg_non_sentinel, "--version") or std.mem.eql(u8, arg_non_sentinel, "version")) {
+
+            p_arg_struct.has_version = true;
+
         } else if(std.mem.eql(u8, arg_non_sentinel, "--dont_check_enc")) {
 
             p_arg_struct.should_check_enc_data = false;
@@ -80,6 +84,23 @@ pub fn parseArgs(p_arg_struct: *tac.ARGUMENT_STRUCT, args: []const [:0]u8) !void
 }
 
 /// DESCRIPTION
+/// Prints the build-time versioning information, including: zig version, app version, optimise mode, CPU and OS
+///
+/// PARAMETERS
+/// `p_file_handle` - File to print to (this is usually stdout)
+pub fn printVersionInfo(p_file_handle: *std.Io.Writer, p_v_info: *tac.VERSION_INFO) !void {
+    try p_file_handle.writeAll("\n=== VERSION INFO ===\n");
+
+    try p_file_handle.print("Zenc Application Version: {s}\n", .{p_v_info.app_version});
+    try p_file_handle.print("Built for OS: {s} on CPU: {s}\n", .{p_v_info.install_os, p_v_info.install_cpu});
+    try p_file_handle.print("Optimisation: {s}\n", .{p_v_info.install_optimise_mode});
+    try p_file_handle.print("Zig Version: {s}\n", .{p_v_info.zig_build_version});
+    try p_file_handle.writeAll("\n");
+
+    try p_file_handle.flush();
+}
+
+/// DESCRIPTION
 /// Displays the usage instructions and a list of available commands
 ///
 /// PARAMETERS
@@ -95,6 +116,7 @@ pub fn printHelp(p_file_handle: *std.Io.Writer) !void {
     \\ -e=<file_to_encrypt> -> Encrypt file
     \\ -d=<file_to_decrypt> -> Decrypt file
     \\ --dont_check_enc -> Stop immediate encrypted file decryption check (increase speed).
+    \\ --version OR version -> Print the build-time versioning information.
     \\ -v OR --verbose -> Prints extra stdout information
     ;
 
@@ -333,6 +355,7 @@ test "printHelp - general print" {
     \\ -e=<file_to_encrypt> -> Encrypt file
     \\ -d=<file_to_decrypt> -> Decrypt file
     \\ --dont_check_enc -> Stop immediate encrypted file decryption check (increase speed).
+    \\ --version OR version -> Print the build-time versioning information.
     \\ -v OR --verbose -> Prints extra stdout information
     ;
 

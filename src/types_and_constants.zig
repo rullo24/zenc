@@ -7,12 +7,21 @@ const builtin: type = @import("builtin");
 
 pub const ARGUMENT_STRUCT: type = struct {
     has_help: bool = false,
+    has_version: bool = false,
     verbose_print: bool = false,
     should_check_enc_data: bool = true,
     opt_enc_file_loc: ?[]const u8 = null, // init as empty
     enc_buf: [MAX_PATH_SIZE]u8 = undefined,
     opt_dec_file_loc: ?[]const u8 = null, // init as empty
     dec_buf: [MAX_PATH_SIZE]u8 = undefined,
+};
+
+pub const VERSION_INFO: type = struct {
+    app_version: []const u8,
+    install_cpu: []const u8,
+    install_os: []const u8,
+    install_optimise_mode: []const u8,
+    zig_build_version: []const u8,
 };
 
 ////////////////////////////

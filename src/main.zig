@@ -1,4 +1,6 @@
-const std = @import("std");
+const std: type = @import("std");
+const builtin: type = @import("builtin");
+const version_info: type = @import("build_version_info"); // provided by build.zig
 
 // IMPORT LOCAL PACKAGES //
 const cipher: type = @import("cipher.zig");
@@ -46,6 +48,26 @@ pub fn main() !void {
             try io_stdout_writer.flush();
         } 
         return; // end program after printing help
+    }
+
+    // check if version flag is in captured args --> print version info
+    if (args_obj.has_version == true) {
+        
+        var v_info: tac.VERSION_INFO = .{
+            .app_version = version_info.APP_VERSION,
+            .install_cpu = version_info.INSTALL_CPU,
+            .install_optimise_mode = version_info.OPTIMISE_MODE,
+            .install_os = version_info.INSTALL_OS,
+            .zig_build_version = version_info.ZIG_VERSION,
+        };
+
+        try cli.printVersionInfo(io_stdout_writer, &v_info);
+        if (args_obj.verbose_print) {
+            _ = try io_stdout_writer.writeAll("\targs_obj.has_version == true. Printed version info\n");
+            try io_stdout_writer.flush();
+        } 
+        return; // end program after printing version info
+
     }
 
     // check for sufficient arguments parsed by user to continue

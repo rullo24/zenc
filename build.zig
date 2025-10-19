@@ -1,10 +1,28 @@
-const std = @import("std");
+const std: type = @import("std");
+const builtin: type = @import("builtin");
+
+const APP_VERSION: []const u8 = "v1.1.0";
+const VERSION_INFO: type = struct {
+    app_version: []const u8 = APP_VERSION,
+    install_cpu: []const u8,
+    install_os: []const u8,
+    install_optimise_mode: []const u8,
+    zig_build_version: []const u8,
+};
 
 pub fn build(b: *std.Build) !void {
 
     // defining default build args
     const def_target: std.Build.ResolvedTarget = b.standardTargetOptions(.{});
     const def_optimise: std.builtin.OptimizeMode = b.standardOptimizeOption(.{});
+
+    // capture versioning info for capture and parse to main
+    const version_info: VERSION_INFO = VERSION_INFO {
+        .install_cpu = @tagName(def_target.result.cpu.arch),
+        .install_os = @tagName(def_target.result.os.tag),
+        .install_optimise_mode = @tagName(def_optimise),
+        .zig_build_version = builtin.zig_version_string,
+    };
 
     // EXECUTABLE BUILDING //
     
@@ -15,6 +33,15 @@ pub fn build(b: *std.Build) !void {
         .optimize = def_optimise,
         .target = def_target,
     });
+    
+    // parsing versioning info to main (for version print)
+    const version_info_step: *std.Build.Step.Options = b.addOptions();
+    version_info_step.addOption([]const u8, "APP_VERSION", version_info.app_version);
+    version_info_step.addOption([]const u8, "INSTALL_CPU", version_info.install_cpu);
+    version_info_step.addOption([]const u8, "INSTALL_OS", version_info.install_os);
+    version_info_step.addOption([]const u8, "OPTIMISE_MODE", version_info.install_optimise_mode);
+    version_info_step.addOption([]const u8, "ZIG_VERSION", version_info.zig_build_version);
+    root_exe_module.addOptions("build_version_info", version_info_step);
 
     // compiler for building executable
     const root_exe_compiler: *std.Build.Step.Compile = b.addExecutable(.{

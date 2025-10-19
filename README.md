@@ -22,10 +22,11 @@ Encrypting or Decrypting a file creates a file in the same directory as captured
 ### CLI Options
 
 - -h OR --help -> Prints this help menu
-- -e=<file_to_encrypt> -> Encrypt file
-- -d=<file_to_decrypt> -> Decrypt file
+- -e=<file_to_encrypt> -> Encrypt file.
+- -d=<file_to_decrypt> -> Decrypt file.
 - --dont_check_enc -> Stop immediate encrypted file decryption check (increase speed).
-- -v OR --verbose -> Prints extra stdout information
+- --version OR version -> Prints build versioning information.
+- -v OR --verbose -> Prints extra stdout information.
 
 #### Examples
 
