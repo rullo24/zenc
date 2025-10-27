@@ -1,7 +1,7 @@
 const std: type = @import("std");
 const builtin: type = @import("builtin");
 
-const APP_VERSION: []const u8 = "v1.3.0";
+const APP_VERSION: []const u8 = "v1.3.1";
 const VERSION_INFO: type = struct {
     app_version: []const u8 = APP_VERSION,
     install_cpu: []const u8,

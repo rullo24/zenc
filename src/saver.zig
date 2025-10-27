@@ -64,7 +64,11 @@ pub fn saveOutput(
 
     // saving cipher calculated text to a file
     if (s_opt_output_data) |s_output_data| {
-        const p_out_file: std.fs.File = try std.fs.cwd().createFile(s_new_save_loc, .{}); // overwrites prev file if exists 
+        
+        // FIXME: hit assert for std.mem.indexOfScalar(u8, s_new_save_loc, 0).? (an internal of std.fs.Dir.createFile on posix - linux/macos)
+        // NOTE: This works regularly on windows
+
+        const p_out_file: std.fs.File = try std.fs.cwd().createFile(s_new_save_loc, .{  }); // overwrites prev file if exists 
         defer p_out_file.close(); // close after local scope finishes
 
         // writing to output file using Io.Writer
