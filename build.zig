@@ -1,7 +1,7 @@
 const std: type = @import("std");
 const builtin: type = @import("builtin");
 
-const APP_VERSION: []const u8 = "v1.2.0";
+const APP_VERSION: []const u8 = "v1.3.0";
 const VERSION_INFO: type = struct {
     app_version: []const u8 = APP_VERSION,
     install_cpu: []const u8,
@@ -21,7 +21,6 @@ pub fn build(b: *std.Build) !void {
     // module for capturing main entry (main.zig)
     const root_exe_module: *std.Build.Module = b.createModule(.{
         .root_source_file = b.path("./src/main.zig"),
-        .strip = false,
         .optimize = def_optimise,
         .target = def_target,
     });
@@ -34,7 +33,7 @@ pub fn build(b: *std.Build) !void {
     const arch_str: []const u8 = @tagName(def_target.result.cpu.arch);
     const os_str: []const u8 = @tagName(def_target.result.os.tag);
     const root_exe_compiler: *std.Build.Step.Compile = b.addExecutable(.{
-        .name = b.fmt("zenc_{s}-{s}", .{ arch_str, os_str }),
+        .name = b.fmt("zenc_{s}-{s}_{s}", .{ arch_str, os_str, APP_VERSION, }),
         .root_module = root_exe_module,
         .use_llvm = true,
     });
@@ -42,8 +41,13 @@ pub fn build(b: *std.Build) !void {
 
     // BUILD ALL ARCH + OS STEP //
     const build_all_step: *std.Build.Step = b.step("all", "Build all executable types.");
-    const arch_to_build: []const std.Target.Cpu.Arch = &.{ std.Target.Cpu.Arch.aarch64, std.Target.Cpu.Arch.x86_64 };
-    const os_to_build: []const std.Target.Os.Tag = &.{ std.Target.Os.Tag.windows, std.Target.Os.Tag.linux };
+    const arch_to_build: []const std.Target.Cpu.Arch = &.{  std.Target.Cpu.Arch.aarch64, 
+                                                            std.Target.Cpu.Arch.x86_64,
+                                                            };
+    const os_to_build: []const std.Target.Os.Tag = &.{  std.Target.Os.Tag.windows, 
+                                                        std.Target.Os.Tag.linux,
+                                                        std.Target.Os.Tag.macos,
+                                                        };
 
     // building for all targets (will repeat regular install artefact)
     for (arch_to_build) |curr_arch| {
@@ -59,7 +63,6 @@ pub fn build(b: *std.Build) !void {
             // create a module from the resolved target
             const cross_exe_module: *std.Build.Module = b.createModule(.{
                 .root_source_file = b.path("./src/main.zig"),
-                .strip = false,
                 .optimize = def_optimise,
                 .target = curr_target,
             });
@@ -70,7 +73,7 @@ pub fn build(b: *std.Build) !void {
 
             // create an exe compiler obj from the cross-compile module
             const cross_exe_compiler: *std.Build.Step.Compile = b.addExecutable(.{
-                .name = b.fmt("zenc_{s}-{s}", .{ @tagName(curr_arch), @tagName(curr_os) }),
+                .name = b.fmt("zenc_{s}-{s}_{s}", .{ @tagName(curr_arch), @tagName(curr_os), APP_VERSION }),
                 .root_module = cross_exe_module,
                 .use_llvm = true,
             });
@@ -104,7 +107,6 @@ pub fn build(b: *std.Build) !void {
         // creating module for building test step
         const curr_file_module = b.createModule(.{
             .root_source_file = curr_lazypath,
-            .strip = false,
             .optimize = def_optimise,
             .target = def_target,
             .error_tracing = true,
