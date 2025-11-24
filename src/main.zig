@@ -24,7 +24,7 @@ pub fn main() !void {
     const f_stdout: std.fs.File = std.fs.File.stdout();
     defer f_stdout.close();
     var fs_stdout_writer: std.fs.File.Writer = f_stdout.writer(&.{});
-    const io_stdout_writer: *std.Io.Writer = &fs_stdout_writer.interface; 
+    const io_stdout_writer: *std.Io.Writer = &fs_stdout_writer.interface;
 
     // creating stdin reader and prompting user for password
     const f_stdin: std.fs.File = std.fs.File.stdin();
@@ -46,13 +46,12 @@ pub fn main() !void {
         if (args_obj.verbose_print) {
             _ = try io_stdout_writer.writeAll("\targs_obj.has_help == true. Printed help menu\n");
             try io_stdout_writer.flush();
-        } 
+        }
         return; // end program after printing help
     }
 
     // check if version flag is in captured args --> print version info
     if (args_obj.has_version == true) {
-        
         var v_info: tac.VERSION_INFO = .{
             .app_version = version_info.APP_VERSION,
             .install_cpu = version_info.INSTALL_CPU,
@@ -65,7 +64,7 @@ pub fn main() !void {
         if (args_obj.verbose_print) {
             _ = try io_stdout_writer.writeAll("\targs_obj.has_version == true. Printed version info\n");
             try io_stdout_writer.flush();
-        } 
+        }
         return; // end program after printing version info
 
     }
@@ -75,7 +74,7 @@ pub fn main() !void {
     if (args_obj.verbose_print) {
         _ = try io_stdout_writer.writeAll("\tSUCCESS: Argument Validation\n");
         try io_stdout_writer.flush();
-    } 
+    }
 
     // capture password from stdin (user input)
     var b_pass_v1: [tac.MAX_PASSWORD_SIZE_BYTES]u8 = std.mem.zeroes([tac.MAX_PASSWORD_SIZE_BYTES]u8);
@@ -85,18 +84,16 @@ pub fn main() !void {
     if (args_obj.verbose_print) {
         _ = try io_stdout_writer.writeAll("\tSUCCESS: Password 1 Captured from User\n");
         try io_stdout_writer.flush();
-    } 
+    }
 
     // capture file object from available item
-    const p_in_file: std.fs.File = 
-        if (args_obj.opt_enc_file_loc != null) try std.fs.cwd().openFile(args_obj.opt_enc_file_loc.?, .{.mode = .read_only})
-        else if (args_obj.opt_dec_file_loc != null) try std.fs.cwd().openFile(args_obj.opt_dec_file_loc.?, .{.mode = .read_only})
-        else return error.ENC_OR_DEC_FILE_DNE;
+    const p_in_file: std.fs.File =
+        if (args_obj.opt_enc_file_loc != null) try std.fs.cwd().openFile(args_obj.opt_enc_file_loc.?, .{ .mode = .read_only }) else if (args_obj.opt_dec_file_loc != null) try std.fs.cwd().openFile(args_obj.opt_dec_file_loc.?, .{ .mode = .read_only }) else return error.ENC_OR_DEC_FILE_DNE;
     defer p_in_file.close(); // free file descriptor memory
     if (args_obj.verbose_print) {
         _ = try io_stdout_writer.writeAll("\tSUCCESS: Opened parsed enc/dec file\n");
         try io_stdout_writer.flush();
-    } 
+    }
 
     // read file contents into buffer (heaped)
     const file_size: u64 = try p_in_file.getEndPos();
@@ -106,7 +103,7 @@ pub fn main() !void {
     if (args_obj.verbose_print) {
         _ = try io_stdout_writer.writeAll("\tSUCCESS: Read file stream into RAM buffer\n");
         try io_stdout_writer.flush();
-    } 
+    }
 
     // building buf for output file text (NONCE + ciphertext + AUTH_TAG)
     const output_size: usize = (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + file_size + tac.AUTH_TAG_SIZE);
@@ -116,7 +113,7 @@ pub fn main() !void {
     if (args_obj.verbose_print) {
         _ = try io_stdout_writer.writeAll("\tSUCCESS: Allocated ciphertext and output buffers\n");
         try io_stdout_writer.flush();
-    } 
+    }
 
     // --- ENCRYPTION/DECRYPTION BRANCHING --- //
 
@@ -140,8 +137,8 @@ pub fn main() !void {
         if (args_obj.verbose_print) {
             _ = try io_stdout_writer.writeAll("\tSUCCESS: Password 2 captured from stdin\n");
             try io_stdout_writer.flush();
-        } 
-        
+        }
+
         // 2. compare s_password_v1 and s_password_v2 --> throw error if these don't match
         if (std.mem.eql(u8, s_password_v1, s_password_v2) != true) return error.PASSWORDS_DO_NOT_MATCH;
 
@@ -158,21 +155,21 @@ pub fn main() !void {
         if (args_obj.verbose_print) {
             _ = try io_stdout_writer.writeAll("\tSUCCESS: Key derived from provided password\n");
             try io_stdout_writer.flush();
-        } 
+        }
 
         // 6. encrypt raw contents into ciphertext buffer
         try cipher.encrypt(&b_final_key, s_raw_buf, s_ciphertext_buf, &enc_cipher_obj);
         if (args_obj.verbose_print) {
             _ = try io_stdout_writer.writeAll("\tSUCCESS: Cipher text encrypted\n");
             try io_stdout_writer.flush();
-        } 
+        }
 
         // 7. write magic num, then salt, then nonce, then ciphertext, then auth tag to ciphertext buffer
         s_opt_output_data = packaging.packEncryptionDataToOutputBuf(s_output_buf, s_ciphertext_buf, &enc_cipher_obj);
         if (args_obj.verbose_print) {
             _ = try io_stdout_writer.writeAll("\tSUCCESS: Encryption data packed into output buffer for external flush\n");
             try io_stdout_writer.flush();
-        } 
+        }
 
         // -- START SELF TEST ENCRYPTED DATA -- //
 
@@ -183,7 +180,7 @@ pub fn main() !void {
             // create component for immediate decryption test
             if (s_opt_output_data == null) return error.NO_OUTPUT_ENC_DATA;
             var test_dec_components: packaging.CIPHER_COMPONENTS = try packaging.unpackDecryptionDataFromOutputBuf(s_opt_output_data.?);
-            
+
             // decrypt data that was just encrypted
             const s_test_dec_data: []const u8 = try cipher.decrypt(
                 s_test_dec_buf, // buffer to write the plaintext into
@@ -196,32 +193,37 @@ pub fn main() !void {
             if (args_obj.verbose_print) {
                 _ = try io_stdout_writer.writeAll("\tSUCCESS: Self test on encrypted data PASSING\n");
                 try io_stdout_writer.flush();
-            } 
+            }
         }
         // -- END SELF TEST ENCRYPTED DATA -- //
 
         // 9. destroying all crypto entries
-        cipher.secureDestoryAllArgs( .{&b_pass_v1[0..s_password_v1.len], &b_pass_v2[0..s_password_v2.len], &b_final_key, &enc_cipher_obj, &s_ciphertext_buf,} );
+        cipher.secureDestoryAllArgs(.{
+            &b_pass_v1[0..s_password_v1.len],
+            &b_pass_v2[0..s_password_v2.len],
+            &b_final_key,
+            &enc_cipher_obj,
+            &s_ciphertext_buf,
+        });
         if (args_obj.verbose_print) {
             _ = try io_stdout_writer.writeAll("\tSUCCESS: Securely destoryed all encryption arguments\n");
             try io_stdout_writer.flush();
-        } 
+        }
 
         _ = try io_stdout_writer.write("\n=== ENCRYPTION COMPLETED SUCCESSFULLY ===\n");
         try io_stdout_writer.flush();
 
-    // IF DECRYPTION
-    } else if (args_obj.opt_dec_file_loc != null) { 
-
+        // IF DECRYPTION
+    } else if (args_obj.opt_dec_file_loc != null) {
         _ = try io_stdout_writer.write("\n=== DECRYPTION MODE SET ===\n");
         try io_stdout_writer.flush();
 
         // 1. basic file check to see if file can hold all non-ciphertext info
-        if (file_size < (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL_FOR_ZENC_FILE; 
+        if (file_size < (@sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + tac.AUTH_TAG_SIZE)) return error.FILE_READ_TOO_SMALL_FOR_ZENC_FILE;
 
         // 2. extract magic num, salt, nonce, encrypted text and auth tag from file
         const retrieved_components: packaging.CIPHER_COMPONENTS = try packaging.unpackDecryptionDataFromOutputBuf(s_raw_buf);
- 
+
         // 3. generate crypto key using extracted salt
         var b_final_key: [tac.SHA256_BYTE_SIZE]u8 = undefined; // 256-bit
         try cipher.deriveKeyFromPass(s_password_v1, &retrieved_components.b_salt, &b_final_key);
@@ -243,14 +245,14 @@ pub fn main() !void {
         if (args_obj.verbose_print) {
             _ = try io_stdout_writer.writeAll("\tSUCCESS: Decrypted file data saved into output buffer\n");
             try io_stdout_writer.flush();
-        } 
+        }
 
         // 6. destory all cryptographic entries
-        cipher.secureDestoryAllArgs( .{&b_pass_v1[0..s_password_v1.len], &b_final_key, &retrieved_components} );
+        cipher.secureDestoryAllArgs(.{ &b_pass_v1[0..s_password_v1.len], &b_final_key, &retrieved_components });
         if (args_obj.verbose_print) {
             _ = try io_stdout_writer.writeAll("\tSUCCESS: Securely destoryed all decryption arguments\n");
             try io_stdout_writer.flush();
-        } 
+        }
 
         _ = try io_stdout_writer.write("\n=== DECRYPTION COMPLETED SUCCESSFULLY ===\n");
         try io_stdout_writer.flush();
@@ -263,7 +265,5 @@ pub fn main() !void {
     try saver.saveOutput(alloc, &args_obj, s_opt_output_data, io_stdout_writer);
 
     // ensure all CONFIDENTIAL buffers are destroyed
-    cipher.secureDestoryAllArgs(.{&s_output_buf, &s_raw_buf}); 
-
+    cipher.secureDestoryAllArgs(.{ &s_output_buf, &s_raw_buf });
 }
-

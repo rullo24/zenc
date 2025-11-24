@@ -18,10 +18,10 @@ pub fn deriveKeyFromPass(password: []const u8, p_salt: *const [tac.ZENC_SALT_SIZ
 
     // extract pseudo random key from password and salt
     const pass_salt_prk: [tac.SHA256_BYTE_SIZE]u8 = std.crypto.kdf.hkdf.HkdfSha256.extract(p_salt.*[0..], password);
-    
+
     // expand prk into final encryption key
     std.crypto.kdf.hkdf.HkdfSha256.expand(
-        p_final_key, 
+        p_final_key,
         ENCRYPTION_CONTEXT_STR,
         pass_salt_prk,
     );
@@ -50,7 +50,6 @@ pub fn encrypt(p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext: []const u8, cipherte
     );
 }
 
-
 /// DESCRIPTION
 /// Handles all decryption logic. Validates the file and verifies the auth tag. Returns a slice of the decrypted plaintext buf.
 /// PARAMETERS
@@ -59,9 +58,8 @@ pub fn encrypt(p_key: *[tac.SHA256_BYTE_SIZE]u8, plaintext: []const u8, cipherte
 /// `p_retrieved` - A struct that contains the cipher components for encryption and decryption
 /// `p_key` - Generated from the password(s) + salt, the key is used to decrypt the file
 pub fn decrypt(plaintext_buf: []u8, p_retrieved: *packaging.CIPHER_COMPONENTS, p_key: *[tac.SHA256_BYTE_SIZE]u8) ![]const u8 {
-
     if (p_retrieved.s_opt_payload == null) return error.NULL_DECRYPTION_PAYLOAD;
-    
+
     // check that the output buffer is capable of receiving data
     if (plaintext_buf.len > p_retrieved.s_opt_payload.?.len) return error.PLAINTEXT_BUF_TOO_SMALL_FOR_ENC;
 
@@ -85,64 +83,56 @@ pub fn decrypt(plaintext_buf: []u8, p_retrieved: *packaging.CIPHER_COMPONENTS, p
 pub fn secureDestoryAllArgs(args: anytype) void {
 
     // inline forces compiler to unravel loop at comptime
-    inline for (args) |p_argument| { 
+    inline for (args) |p_argument| {
 
         // get type of parsed argument
         const parsed_arg_type: type = @TypeOf(p_argument);
         const parsed_arg_type_info = @typeInfo(parsed_arg_type);
 
         // skipping raw slice parses
-        if ( parsed_arg_type_info.pointer.size == .slice ) @compileError("ERROR: Raw slice parsed to secureDestoryAllArgs");
+        if (parsed_arg_type_info.pointer.size == .slice) @compileError("ERROR: Raw slice parsed to secureDestoryAllArgs");
 
         // switch the way to zero based on its type
         switch (parsed_arg_type_info) {
             .pointer => {
-
                 switch (@typeInfo(parsed_arg_type_info.pointer.child)) {
-
                     .array => {
-
                         if (p_argument.*.len == 0) continue; // pass zero sized arrays
                         const i_arr_start: usize = @intFromPtr(p_argument);
                         const p_arr_start: [*]volatile u8 = @ptrFromInt(i_arr_start);
                         const byte_size: usize = @sizeOf(@TypeOf(p_argument.*[0]));
-                        std.crypto.secureZero(u8, p_arr_start[ 0..(p_argument.*.len*byte_size) ] );
+                        std.crypto.secureZero(u8, p_arr_start[0..(p_argument.*.len * byte_size)]);
                     },
 
                     .@"struct" => {
-                        
+
                         // convert to byte slice
                         const ptr_as_int: usize = @intFromPtr(p_argument);
                         const byte_size: usize = @sizeOf(@TypeOf(p_argument.*));
                         const p_byte_start: [*]u8 = @ptrFromInt(ptr_as_int);
                         const byte_slice: []u8 = p_byte_start[0..byte_size];
-                        std.crypto.secureZero(u8, @constCast(@ptrCast(byte_slice)));
-
+                        std.crypto.secureZero(u8, @ptrCast(@constCast(byte_slice)));
                     },
 
                     else => {
-                        
                         if (@typeInfo(@TypeOf(p_argument.*)).pointer.size == .slice) { // ptr to slice provided
-                            
+
                             // avoiding compiler static memory ([]const u8's)
                             if (@typeInfo(@TypeOf(p_argument.*)).pointer.is_const == false) {
 
                                 // pass zero sized arrays
                                 if (p_argument.*.len != 0) {
-                                    std.crypto.secureZero(u8, @ptrCast(@constCast(p_argument.*[0..p_argument.*.len])) );
+                                    std.crypto.secureZero(u8, @ptrCast(@constCast(p_argument.*[0..p_argument.*.len])));
                                 }
-
                             } else @compileError("ERROR: parsed []const <type>. Cannot change underlying slice values.");
-
                         } else {
                             @compileError("ERROR: unsupported type provided to secureDestoryAllArgs");
                         }
                     },
                 }
-            }, 
+            },
 
             else => @compileError("ERROR: type not supported in secureDestroyAllArgs"),
-
         }
     }
 }
@@ -158,8 +148,7 @@ pub fn secureDestoryAllArgs(args: anytype) void {
 // -- START secureDestroyAllArgs -- //
 test "secureDestroyAllArgs - zero-sized array" {
     var b_empty: [0]u8 = [_]u8{'A'} ** 0;
-    secureDestoryAllArgs( .{&b_empty} );
-
+    secureDestoryAllArgs(.{&b_empty});
 }
 
 test "secureDestroyAllArgs - empty args" {
@@ -167,8 +156,6 @@ test "secureDestroyAllArgs - empty args" {
 }
 
 test "secureDestroyAllArgs - args all arrays (1x args)" {
-
-    
     var b_str1: [256]u8 = [_]u8{0xFF} ** 256;
     secureDestoryAllArgs(.{&b_str1});
     for (b_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
@@ -176,11 +163,10 @@ test "secureDestroyAllArgs - args all arrays (1x args)" {
 }
 
 test "secureDestroyAllArgs - args all arrays (3x args)" {
-
     var b_str1: [256]u8 = undefined;
     var b_str2: [1024]u8 = [_]u8{0x12} ** 1024;
     var b_str3: [4096]u8 = [_]u8{0x34} ** 4096;
-    secureDestoryAllArgs( .{ &b_str1, &b_str2, &b_str3 } );
+    secureDestoryAllArgs(.{ &b_str1, &b_str2, &b_str3 });
     for (b_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
     for (b_str2) |c| try testing.expect(c == 0x0); // check all values are zeroed
     for (b_str3) |c| try testing.expect(c == 0x0); // check all values are zeroed
@@ -188,17 +174,15 @@ test "secureDestroyAllArgs - args all arrays (3x args)" {
 }
 
 test "secureDestroyAllArgs - args all strings (1x args)" {
-    
     const s_str1: []u8 = try testing.allocator.alloc(u8, 1024);
     defer testing.allocator.free(s_str1);
     @memset(s_str1, 'A');
-    secureDestoryAllArgs( .{ &s_str1 } );
+    secureDestoryAllArgs(.{&s_str1});
     for (s_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
-    
+
 }
 
 test "secureDestroyAllArgs - args all strings (3x args)" {
-
     const s_str1: []u8 = try testing.allocator.alloc(u8, 256);
     defer testing.allocator.free(s_str1);
     @memset(s_str1, 'C');
@@ -209,7 +193,7 @@ test "secureDestroyAllArgs - args all strings (3x args)" {
     const s_str3: []u8 = try testing.allocator.alloc(u8, 256);
     defer testing.allocator.free(s_str3);
     @memset(s_str3, 'D');
-    secureDestoryAllArgs( .{ &s_str1, &s_str2, &s_str3 } );
+    secureDestoryAllArgs(.{ &s_str1, &s_str2, &s_str3 });
     for (s_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
     for (s_str2) |c| try testing.expect(c == 0x0); // check all values are zeroed
     for (s_str3) |c| try testing.expect(c == 0x0); // check all values are zeroed
@@ -217,56 +201,52 @@ test "secureDestroyAllArgs - args all strings (3x args)" {
 }
 
 test "secureDestroyAllArgs - args all CIPHER_COMPONENTS (1x args)" {
-
-    var cipher1: packaging.CIPHER_COMPONENTS  = .{};
+    var cipher1: packaging.CIPHER_COMPONENTS = .{};
     cipher1.magic_num = tac.ZENC_MAGIC_NUM;
     cipher1.b_salt = [_]u8{0x12} ** tac.ZENC_SALT_SIZE;
     cipher1.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
     cipher1.b_auth_tag = [_]u8{0xff} ** tac.AUTH_TAG_SIZE;
     const cipher1_size: usize = @sizeOf(@TypeOf(cipher1));
 
-    secureDestoryAllArgs( .{ &cipher1 } );
+    secureDestoryAllArgs(.{&cipher1});
 
     const p_cipher1: [*]u8 = @ptrCast(&cipher1);
-    for (p_cipher1[0..cipher1_size]) |c| try testing.expect (c == 0x0);
+    for (p_cipher1[0..cipher1_size]) |c| try testing.expect(c == 0x0);
 }
 
 test "secureDestroyAllArgs - args all CIPHER_COMPONENTS (3x args)" {
-    
-    var cipher1: packaging.CIPHER_COMPONENTS  = .{};
+    var cipher1: packaging.CIPHER_COMPONENTS = .{};
     cipher1.magic_num = tac.ZENC_MAGIC_NUM;
     cipher1.b_salt = [_]u8{0x12} ** tac.ZENC_SALT_SIZE;
     cipher1.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
     cipher1.b_auth_tag = [_]u8{0xff} ** tac.AUTH_TAG_SIZE;
     const cipher1_size: usize = @sizeOf(@TypeOf(cipher1));
 
-    var cipher2: packaging.CIPHER_COMPONENTS  = .{};
+    var cipher2: packaging.CIPHER_COMPONENTS = .{};
     cipher2.magic_num = tac.ZENC_MAGIC_NUM;
     cipher2.b_salt = [_]u8{0x12} ** tac.ZENC_SALT_SIZE;
     cipher2.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
     cipher2.b_auth_tag = [_]u8{0xff} ** tac.AUTH_TAG_SIZE;
     const cipher2_size: usize = @sizeOf(@TypeOf(cipher2));
 
-    var cipher3: packaging.CIPHER_COMPONENTS  = .{};
+    var cipher3: packaging.CIPHER_COMPONENTS = .{};
     cipher3.magic_num = tac.ZENC_MAGIC_NUM;
     cipher3.b_salt = [_]u8{0x12} ** tac.ZENC_SALT_SIZE;
     cipher3.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
     cipher3.b_auth_tag = [_]u8{0xff} ** tac.AUTH_TAG_SIZE;
     const cipher3_size: usize = @sizeOf(@TypeOf(cipher3));
 
-    secureDestoryAllArgs( .{ &cipher1, &cipher2, &cipher3 } );
+    secureDestoryAllArgs(.{ &cipher1, &cipher2, &cipher3 });
 
     const p_cipher1: [*]u8 = @ptrCast(&cipher1);
-    for (p_cipher1[0..cipher1_size]) |c| try testing.expect (c == 0x0);
+    for (p_cipher1[0..cipher1_size]) |c| try testing.expect(c == 0x0);
     const p_cipher2: [*]u8 = @ptrCast(&cipher2);
-    for (p_cipher2[0..cipher2_size]) |c| try testing.expect (c == 0x0);
+    for (p_cipher2[0..cipher2_size]) |c| try testing.expect(c == 0x0);
     const p_cipher3: [*]u8 = @ptrCast(&cipher3);
-    for (p_cipher3[0..cipher3_size]) |c| try testing.expect (c == 0x0);
- 
+    for (p_cipher3[0..cipher3_size]) |c| try testing.expect(c == 0x0);
 }
 
 test "secureDestroyAllArgs - mix of strings, arrays and CIPHER_COMPONENTS (5x args)" {
-
     var b_str1: [256]u8 = [_]u8{0xFF} ** 256;
 
     const s_str2: []u8 = try testing.allocator.alloc(u8, 1024);
@@ -279,7 +259,7 @@ test "secureDestroyAllArgs - mix of strings, arrays and CIPHER_COMPONENTS (5x ar
     defer testing.allocator.free(s_str4);
     @memset(s_str4, 'A');
 
-    var cipher5: packaging.CIPHER_COMPONENTS  = .{};
+    var cipher5: packaging.CIPHER_COMPONENTS = .{};
     cipher5.magic_num = tac.ZENC_MAGIC_NUM;
     cipher5.b_salt = [_]u8{0x12} ** tac.ZENC_SALT_SIZE;
     cipher5.b_nonce = [_]u8{0x91} ** tac.NONCE_SIZE;
@@ -287,21 +267,123 @@ test "secureDestroyAllArgs - mix of strings, arrays and CIPHER_COMPONENTS (5x ar
     const cipher5_size: usize = @sizeOf(@TypeOf(cipher5));
     const p_cipher5: [*]u8 = @ptrCast(&cipher5);
 
-    secureDestoryAllArgs( .{ &b_str1, &s_str2, &b_str3, &s_str4, &cipher5 } );
+    secureDestoryAllArgs(.{ &b_str1, &s_str2, &b_str3, &s_str4, &cipher5 });
 
     for (b_str1) |c| try testing.expect(c == 0x0); // check all values are zeroed
     for (s_str2) |c| try testing.expect(c == 0x0); // check all values are zeroed
     for (b_str3) |c| try testing.expect(c == 0x0); // check all values are zeroed
     for (s_str4) |c| try testing.expect(c == 0x0); // check all values are zeroed
-    for (p_cipher5[0..cipher5_size]) |c| try testing.expect (c == 0x0);
-
+    for (p_cipher5[0..cipher5_size]) |c| try testing.expect(c == 0x0);
 }
 
 // -- END secureDestroyAllArgs -- //
 
+// -- START encrypt/decrypt large file tests -- //
+
+test "encrypt and decrypt - large file (10MB)" {
+    const alloc: std.mem.Allocator = testing.allocator;
+    const large_file_size: usize = 10 * 1024 * 1024; // 10MB
+
+    // create large plaintext buffer with test data
+    const s_plaintext: []u8 = try alloc.alloc(u8, large_file_size);
+    defer alloc.free(s_plaintext);
+    // fill with pattern to verify correctness
+    for (s_plaintext, 0..) |*byte, i| {
+        byte.* = @intCast(i % 256);
+    }
+
+    // setup encryption
+    var b_key: [tac.SHA256_BYTE_SIZE]u8 = undefined;
+    var b_salt: [tac.ZENC_SALT_SIZE]u8 = undefined;
+    std.crypto.random.bytes(&b_salt);
+    const password = "test_password_123";
+    try deriveKeyFromPass(password, &b_salt, &b_key);
+
+    var cipher_components: packaging.CIPHER_COMPONENTS = .{};
+    cipher_components.b_salt = b_salt;
+    std.crypto.random.bytes(&cipher_components.b_nonce);
+
+    // encrypt
+    const s_ciphertext: []u8 = try alloc.alloc(u8, large_file_size);
+    defer alloc.free(s_ciphertext);
+    try encrypt(&b_key, s_plaintext, s_ciphertext, &cipher_components);
+
+    // pack encrypted data
+    const packed_size = @sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + large_file_size + tac.AUTH_TAG_SIZE;
+    const s_packed: []u8 = try alloc.alloc(u8, packed_size);
+    defer alloc.free(s_packed);
+    cipher_components.s_opt_payload = s_ciphertext;
+    const s_packed_slice = packaging.packEncryptionDataToOutputBuf(s_packed, s_ciphertext, &cipher_components);
+
+    // unpack encrypted data
+    const retrieved_components = try packaging.unpackDecryptionDataFromOutputBuf(s_packed_slice);
+
+    // decrypt
+    const s_decrypted: []u8 = try alloc.alloc(u8, large_file_size);
+    defer alloc.free(s_decrypted);
+    const s_decrypted_slice = try decrypt(s_decrypted, @constCast(&retrieved_components), &b_key);
+
+    // verify decrypted data matches original
+    try testing.expectEqual(s_plaintext.len, s_decrypted_slice.len);
+    try testing.expect(std.mem.eql(u8, s_plaintext, s_decrypted_slice));
+
+    // cleanup
+    secureDestoryAllArgs(.{&b_key});
+}
+
+test "encrypt and decrypt - very large file (100MB)" {
+    const alloc: std.mem.Allocator = testing.allocator;
+    const very_large_file_size: usize = 100 * 1024 * 1024; // 100MB
+
+    // create very large plaintext buffer with test data
+    const s_plaintext: []u8 = try alloc.alloc(u8, very_large_file_size);
+    defer alloc.free(s_plaintext);
+    // fill with pattern to verify correctness
+    for (s_plaintext, 0..) |*byte, i| {
+        byte.* = @intCast(i % 256);
+    }
+
+    // setup encryption
+    var b_key: [tac.SHA256_BYTE_SIZE]u8 = undefined;
+    var b_salt: [tac.ZENC_SALT_SIZE]u8 = undefined;
+    std.crypto.random.bytes(&b_salt);
+    const password = "test_password_very_long_123456789";
+    try deriveKeyFromPass(password, &b_salt, &b_key);
+
+    var cipher_components: packaging.CIPHER_COMPONENTS = .{};
+    cipher_components.b_salt = b_salt;
+    std.crypto.random.bytes(&cipher_components.b_nonce);
+
+    // encrypt
+    const s_ciphertext: []u8 = try alloc.alloc(u8, very_large_file_size);
+    defer alloc.free(s_ciphertext);
+    try encrypt(&b_key, s_plaintext, s_ciphertext, &cipher_components);
+
+    // pack encrypted data
+    const packed_size = @sizeOf(@TypeOf(tac.ZENC_MAGIC_NUM)) + tac.ZENC_SALT_SIZE + tac.NONCE_SIZE + very_large_file_size + tac.AUTH_TAG_SIZE;
+    const s_packed: []u8 = try alloc.alloc(u8, packed_size);
+    defer alloc.free(s_packed);
+    cipher_components.s_opt_payload = s_ciphertext;
+    const s_packed_slice = packaging.packEncryptionDataToOutputBuf(s_packed, s_ciphertext, &cipher_components);
+
+    // unpack encrypted data
+    const retrieved_components = try packaging.unpackDecryptionDataFromOutputBuf(s_packed_slice);
+
+    // decrypt
+    const s_decrypted: []u8 = try alloc.alloc(u8, very_large_file_size);
+    defer alloc.free(s_decrypted);
+    const s_decrypted_slice = try decrypt(s_decrypted, @constCast(&retrieved_components), &b_key);
+
+    // verify decrypted data matches original
+    try testing.expectEqual(s_plaintext.len, s_decrypted_slice.len);
+    try testing.expect(std.mem.eql(u8, s_plaintext, s_decrypted_slice));
+
+    // cleanup
+    secureDestoryAllArgs(.{&b_key});
+}
+
+// -- END encrypt/decrypt large file tests -- //
+
 /////////////////////////
 // --- END TESTING --- //
 /////////////////////////
-
-
-

@@ -17,7 +17,7 @@ pub fn build(b: *std.Build) !void {
     const def_optimise: std.builtin.OptimizeMode = b.standardOptimizeOption(.{});
 
     // EXECUTABLE BUILDING //
-    
+
     // module for capturing main entry (main.zig)
     const root_exe_module: *std.Build.Module = b.createModule(.{
         .root_source_file = b.path("./src/main.zig"),
@@ -33,7 +33,11 @@ pub fn build(b: *std.Build) !void {
     const arch_str: []const u8 = @tagName(def_target.result.cpu.arch);
     const os_str: []const u8 = @tagName(def_target.result.os.tag);
     const root_exe_compiler: *std.Build.Step.Compile = b.addExecutable(.{
-        .name = b.fmt("zenc_{s}-{s}_{s}", .{ arch_str, os_str, APP_VERSION, }),
+        .name = b.fmt("zenc_{s}-{s}_{s}", .{
+            arch_str,
+            os_str,
+            APP_VERSION,
+        }),
         .root_module = root_exe_module,
         .use_llvm = true,
     });
@@ -41,22 +45,24 @@ pub fn build(b: *std.Build) !void {
 
     // BUILD ALL ARCH + OS STEP //
     const build_all_step: *std.Build.Step = b.step("all", "Build all executable types.");
-    const arch_to_build: []const std.Target.Cpu.Arch = &.{  std.Target.Cpu.Arch.aarch64, 
-                                                            std.Target.Cpu.Arch.x86_64,
-                                                            };
-    const os_to_build: []const std.Target.Os.Tag = &.{  std.Target.Os.Tag.windows, 
-                                                        std.Target.Os.Tag.linux,
-                                                        std.Target.Os.Tag.macos,
-                                                        };
+    const arch_to_build: []const std.Target.Cpu.Arch = &.{
+        std.Target.Cpu.Arch.aarch64,
+        std.Target.Cpu.Arch.x86_64,
+    };
+    const os_to_build: []const std.Target.Os.Tag = &.{
+        std.Target.Os.Tag.windows,
+        std.Target.Os.Tag.linux,
+        std.Target.Os.Tag.macos,
+    };
 
     // building for all targets (will repeat regular install artefact)
     for (arch_to_build) |curr_arch| {
         for (os_to_build) |curr_os| {
-            
+
             // get target from current CPU and OS
-            const target_query: std.Target.Query = .{ 
-                .cpu_arch = curr_arch, 
-                .os_tag = curr_os, 
+            const target_query: std.Target.Query = .{
+                .cpu_arch = curr_arch,
+                .os_tag = curr_os,
             };
             const curr_target: std.Build.ResolvedTarget = b.resolveTargetQuery(target_query);
 
@@ -143,7 +149,7 @@ fn create_version_options(
 ) *std.Build.Step.Options {
 
     // capture versioning info for capture and parse to main
-    const version_info: VERSION_INFO = VERSION_INFO {
+    const version_info: VERSION_INFO = VERSION_INFO{
         .install_cpu = @tagName(target.result.cpu.arch),
         .install_os = @tagName(target.result.os.tag),
         .install_optimise_mode = @tagName(optimise),
